@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.config import DEFAULT_REGION, DEFAULT_ROUTING
-from app.matchup_service import summarize_live_game
+from app.matchup_service import summarize_live_game, get_matchup_data
 from app.riot_client import RiotClient
 
 app = FastAPI()
@@ -75,4 +75,25 @@ def get_summary(
         "account_found": True,
         "in_game": True,
         "summary": summary,
+    }
+
+@app.get("/matchup")
+def get_matchup(
+    my_champion: str,
+    enemy_champion: str,
+):
+    advice = get_matchup_data(my_champion, enemy_champion)
+
+    if advice is None:
+        return {
+            "found": False,
+            "my_champion": my_champion,
+            "enemy_champion": enemy_champion,
+        }
+    
+    return {
+        "found": True,
+        "my_champion": my_champion,
+        "enemy_champion": enemy_champion,
+        "advice": advice,
     }

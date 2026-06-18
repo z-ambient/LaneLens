@@ -1,4 +1,5 @@
 from app.champions import get_champion_name
+import json
 
 def find_my_participant(current_game, my_puuid):
     for participant in current_game["participants"]:
@@ -55,3 +56,17 @@ def summarize_live_game(current_game, my_puuid):
         "my_team": my_team,
         "enemy_team": enemy_team,
     }
+
+def load_matchup_data():
+    with open("data/matchups.json") as file:
+        return json.load(file)
+    
+def get_matchup_data(my_champion, enemy_champion):
+    matchups = load_matchup_data()
+
+    champion_matchups = matchups.get(my_champion)
+
+    if champion_matchups is None:
+        return None
+    
+    return champion_matchups[enemy_champion]
