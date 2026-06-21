@@ -97,3 +97,45 @@ def get_matchup(
         "enemy_champion": enemy_champion,
         "advice": advice,
     }
+
+@app.get("/live-matchup")
+def get_live_matchup(
+    game_name: str,
+    tag_line: str,
+    enemy_champion: str,
+    region: str = DEFAULT_REGION,
+    routing: str = DEFAULT_ROUTING,
+):
+    client = RiotClient()
+
+    account = client.get_account_by_riot_id(game_name, tag_line, routing)
+
+    if account is None:
+        return {
+            "account_found": False,
+            "in_game": False,
+        }
+    
+    puuid = account["puuid"]
+    current_game = client.get_current_game_by_puuid(puuid, region)
+
+    if current_game is None:
+        return {
+            "account_found": True,
+            "in_game": False,
+        }
+    
+    summary = summarize_live_game(current_game, puuid)
+    my_champion = summary["my_champion"]
+    
+    advice = get_matchup_data(my_champion, enemy_champion)
+
+    return {
+        "account_found": True,
+        "in_game": True,
+        "my_champion": my_champion,
+        "enemy_champion": enemy_champion,
+        "summary": summary,
+        "advice_found": advice is not None,
+        "advice": advice,
+    }

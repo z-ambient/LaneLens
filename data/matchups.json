@@ -200,5 +200,117 @@
         "Use Q to slow Darius when he tries to pull or chase you."
       ]
     }
+  },
+  "Garen": {
+    "Malphite": {
+      "difficulty": "Medium",
+      "first_buy": "Doran's Shield",
+      "lane_plan": "Farm safely early, avoid taking too much Q poke, and look for short trades when Malphite uses abilities on the wave.",
+      "build_direction": "Health, attack damage, and magic resist if Malphite is AP. Armor is better if the enemy team is mostly physical damage.",
+      "tips": [
+        "Use Q movement speed to close the gap after Malphite uses Q.",
+        "Avoid wasting full trades when Malphite has passive shield up.",
+        "Be careful after level 6 because Malphite can set up ganks or all-ins with his ultimate."
+      ]
+    },
+    "Sett": {
+      "difficulty": "Medium",
+      "first_buy": "Doran's Shield",
+      "lane_plan": "Take short trades with Q and E, then back away before Sett can fully stack grit.",
+      "build_direction": "Health and armor. Anti-heal can help if Sett builds sustain or takes long trades.",
+      "tips": [
+        "Do not stand in the center of Sett's W.",
+        "Use Q silence before Sett can return damage with abilities.",
+        "Avoid extended fights where Sett can use his passive and W at full value."
+      ]
+    },
+    "Dr. Mundo": {
+      "difficulty": "Medium",
+      "first_buy": "Doran's Shield",
+      "lane_plan": "Trade early before Mundo gets too tanky, but do not chase through repeated cleavers.",
+      "build_direction": "Health, damage, and anti-heal if Mundo becomes hard to kill.",
+      "tips": [
+        "Use Q to dodge or sidestep Mundo cleavers when possible.",
+        "Do not use your full combo into Mundo passive if you need the silence to stick.",
+        "Your ultimate can finish Mundo if you wait until after his healing has dropped him low."
+      ]
+    },
+    "Nasus": {
+      "difficulty": "Easy",
+      "first_buy": "Doran's Blade",
+      "lane_plan": "Pressure Nasus early, deny stacks, and crash waves so he cannot farm for free.",
+      "build_direction": "Damage early, then health and armor. Anti-heal can help later if Nasus has strong sustain.",
+      "tips": [
+        "Use Q and E to punish Nasus every time he walks up for stacks.",
+        "Do not let the wave sit near his tower for free.",
+        "Respect Nasus after level 6 if he has stacked safely."
+      ]
+    },
+    "Kayle": {
+      "difficulty": "Easy",
+      "first_buy": "Doran's Blade",
+      "lane_plan": "Punish Kayle before level 6 and force her away from the wave as much as possible.",
+      "build_direction": "Damage early, then magic resist if Kayle is AP or armor if she is on-hit AD.",
+      "tips": [
+        "Use Q movement speed to force trades before Kayle gets range.",
+        "Try to freeze or slow push so Kayle has to walk up dangerously.",
+        "Do not waste your ultimate into Kayle ultimate."
+      ]
+    },
+    "Aatrox": {
+      "difficulty": "Medium",
+      "first_buy": "Doran's Shield",
+      "lane_plan": "Avoid Aatrox Q sweet spots and look for short trades when his Q is on cooldown.",
+      "build_direction": "Health, armor, and anti-heal if Aatrox is healing heavily.",
+      "tips": [
+        "Dodge sideways against Aatrox Q instead of running straight back.",
+        "Use Q silence before trading so Aatrox cannot easily chain abilities.",
+        "Do not take extended fights during Aatrox ultimate unless he is already low."
+      ]
+    },
+    "Renekton": {
+      "difficulty": "Medium",
+      "first_buy": "Doran's Shield",
+      "lane_plan": "Respect Renekton's early fury trades and take short trades after he uses cooldowns.",
+      "build_direction": "Health and armor. Anti-heal can help if Renekton builds sustain.",
+      "tips": [
+        "Avoid fighting Renekton when his fury bar is high.",
+        "Use W to reduce incoming burst if he dashes in.",
+        "After early armor, his trades become easier to survive."
+      ]
+    },
+    "Jax": {
+      "difficulty": "Medium",
+      "first_buy": "Doran's Shield",
+      "lane_plan": "Take short trades, avoid hitting into Counter Strike, and back away before Jax extends the fight.",
+      "build_direction": "Health and armor early, with magic resist later if Jax builds mixed damage.",
+      "tips": [
+        "Do not auto or commit into Jax Counter Strike.",
+        "Use Q movement speed to disengage after short trades.",
+        "Your silence can stop Jax from immediately using abilities if you time it before his engage."
+      ]
+    },
+    "Darius": {
+      "difficulty": "Hard",
+      "first_buy": "Doran's Shield",
+      "lane_plan": "Avoid extended fights and do not let Darius stack his passive for free.",
+      "build_direction": "Health, armor, and anti-heal if Darius is healing too much from Q or items.",
+      "tips": [
+        "Stay away from the outer edge of Darius Q to deny his heal.",
+        "Use Q movement speed defensively if he tries to pull you in.",
+        "Only all-in when Darius is low enough for your ultimate to finish him quickly."
+      ]
+    },
+    "Yasuo": {
+      "difficulty": "Easy",
+      "first_buy": "Doran's Shield",
+      "lane_plan": "Play for short trades, punish Yasuo when his shield is down, and avoid fighting inside a large enemy minion wave.",
+      "build_direction": "Health and armor early. Damage is fine if you are ahead, but tankier bruiser items make the lane safer.",
+      "tips": [
+        "Auto or tap E to remove Yasuo's passive shield before using your main trade.",
+        "Use Q silence before Yasuo can dash around or stack another Q.",
+        "Do not chase Yasuo through a big wave because his E mobility is strongest there."
+      ]
+    }
   }
 }

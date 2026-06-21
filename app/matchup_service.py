@@ -69,4 +69,4 @@ def get_matchup_data(my_champion, enemy_champion):
     if champion_matchups is None:
         return None
     
-    return champion_matchups[enemy_champion]
+    return champion_matchups.get(enemy_champion)
