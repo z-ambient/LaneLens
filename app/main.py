@@ -1,9 +1,30 @@
-from fastapi import FastAPI
+import requests
+from fastapi import FastAPI, HTTPException
 from app.config import DEFAULT_REGION, DEFAULT_ROUTING
 from app.matchup_service import summarize_live_game, get_matchup_data
 from app.riot_client import RiotClient
 
 app = FastAPI()
+
+def handle_riot_http_error(error):
+    status_code = error.response.status_code
+
+    if status_code in [401, 403]:
+        raise HTTPException(
+            status_code=401,
+            detail="Riot API key is invalid or expired",
+        )
+
+    if status_code == 429:
+        raise HTTPException(
+            status_code=429,
+            detail="Riot API rate limit exceeded. Try again later.",
+        )
+    
+    raise HTTPException(
+        status_code=502,
+        detail="Unexpected error from Riot API",
+    )
 
 @app.get("/")
 def read_root():
@@ -19,16 +40,20 @@ def get_live_game(
     
     client = RiotClient()
 
-    account = client.get_account_by_riot_id(game_name, tag_line, routing)
+    try:
+        account = client.get_account_by_riot_id(game_name, tag_line, routing)
 
-    if account is None:
-        return {
-            "account_found": False,
-            "in_game": False,
-        }
+        if account is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Riot account not found."
+            )
+        
+        puuid = account["puuid"]
+        current_game = client.get_current_game_by_puuid(puuid, region)
     
-    puuid = account["puuid"]
-    current_game = client.get_current_game_by_puuid(puuid, region)
+    except requests.exceptions.HTTPError as error:
+        handle_riot_http_error(error)
 
     if current_game is None:
         return {
@@ -52,16 +77,20 @@ def get_summary(
     
     client = RiotClient()
 
-    account = client.get_account_by_riot_id(game_name, tag_line, routing)
+    try:
+        account = client.get_account_by_riot_id(game_name, tag_line, routing)
 
-    if account is None:
-        return {
-            "account_found": False,
-            "in_game": False,
-        }
+        if account is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Riot account not found."
+            )
+        
+        puuid = account["puuid"]
+        current_game = client.get_current_game_by_puuid(puuid, region)
     
-    puuid = account["puuid"]
-    current_game = client.get_current_game_by_puuid(puuid, region)
+    except requests.exceptions.HTTPError as error:
+        handle_riot_http_error(error)
 
     if current_game is None:
         return {
@@ -108,16 +137,20 @@ def get_live_matchup(
 ):
     client = RiotClient()
 
-    account = client.get_account_by_riot_id(game_name, tag_line, routing)
+    try:
+        account = client.get_account_by_riot_id(game_name, tag_line, routing)
 
-    if account is None:
-        return {
-            "account_found": False,
-            "in_game": False,
-        }
-    
-    puuid = account["puuid"]
-    current_game = client.get_current_game_by_puuid(puuid, region)
+        if account is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Riot account not found."
+            )
+        
+        puuid = account["puuid"]
+        current_game = client.get_current_game_by_puuid(puuid, region)
+
+    except requests.exceptions.HTTPError as error:
+        handle_riot_http_error(error)
 
     if current_game is None:
         return {
