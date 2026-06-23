@@ -26,18 +26,7 @@ def handle_riot_http_error(error):
         detail="Unexpected error from Riot API",
     )
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to LaneLens"}
-
-@app.get("/live-game")
-def get_live_game(
-    game_name: str,
-    tag_line: str,
-    region: str = DEFAULT_REGION,
-    routing: str = DEFAULT_ROUTING
-    ):
-    
+def get_current_game_for_riot_id(game_name, tag_line, region, routing):
     client = RiotClient()
 
     try:
@@ -54,6 +43,27 @@ def get_live_game(
     
     except requests.exceptions.HTTPError as error:
         handle_riot_http_error(error)
+    
+    return puuid, current_game
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to LaneLens"}
+
+@app.get("/live-game")
+def get_live_game(
+    game_name: str,
+    tag_line: str,
+    region: str = DEFAULT_REGION,
+    routing: str = DEFAULT_ROUTING
+):
+    
+    puuid, current_game = get_current_game_for_riot_id(
+        game_name,
+        tag_line,
+        region,
+        routing,
+    )
 
     if current_game is None:
         return {
@@ -75,22 +85,12 @@ def get_summary(
     routing: str = DEFAULT_ROUTING
 ):
     
-    client = RiotClient()
-
-    try:
-        account = client.get_account_by_riot_id(game_name, tag_line, routing)
-
-        if account is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Riot account not found."
-            )
-        
-        puuid = account["puuid"]
-        current_game = client.get_current_game_by_puuid(puuid, region)
-    
-    except requests.exceptions.HTTPError as error:
-        handle_riot_http_error(error)
+    puuid, current_game = get_current_game_for_riot_id(
+        game_name,
+        tag_line,
+        region,
+        routing,
+    )
 
     if current_game is None:
         return {
@@ -135,22 +135,13 @@ def get_live_matchup(
     region: str = DEFAULT_REGION,
     routing: str = DEFAULT_ROUTING,
 ):
-    client = RiotClient()
-
-    try:
-        account = client.get_account_by_riot_id(game_name, tag_line, routing)
-
-        if account is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Riot account not found."
-            )
-        
-        puuid = account["puuid"]
-        current_game = client.get_current_game_by_puuid(puuid, region)
-
-    except requests.exceptions.HTTPError as error:
-        handle_riot_http_error(error)
+    
+    puuid, current_game = get_current_game_for_riot_id(
+        game_name,
+        tag_line,
+        region,
+        routing,
+    )
 
     if current_game is None:
         return {

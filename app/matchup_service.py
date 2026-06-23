@@ -1,5 +1,5 @@
-from app.champions import get_champion_name
 import json
+from app.champions import get_champion_name
 
 def find_my_participant(current_game, my_puuid):
     for participant in current_game["participants"]:
