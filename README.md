@@ -21,23 +21,35 @@ AI is intentionally not added
 - requests
 - python-dotenv
 - Riot API
-- Json
+- JSON
 
 ## Setup
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+```
 
-Creat a .env file
+Creat a `.env` file:
+```env
 RIOT_API_KEY=your-riot-api-key
 DEFAULT_REGION=na1
 DEFAULT_ROUTING=americas
+```
 
-Run the server
+## Run the server
+```
 uvicorn app.main:app --reload
+```
 
-Routes:
+## Routes:
+
+GET /
+
 GET /live-game?game_name=ambient&tag_line=zee
+
 GET /summary?game_name=ambient&tag_line=zee
+
 GET /matchup?my_champion=Malphite&enemy_champion=Sett
-GET /live_matchup?game_name=ambient&tag_line=zee&enemy_champion=Sett
+
+GET /live-matchup?game_name=ambient&tag_line=zee&enemy_champion=Sett
