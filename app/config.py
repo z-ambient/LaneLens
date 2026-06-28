@@ -10,3 +10,4 @@ DEFAULT_ROUTING = os.getenv("DEFAULT_ROUTING", "americas")
 if not RIOT_API_KEY:
     raise RuntimeError("Missing RIOT_API_KEY")
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

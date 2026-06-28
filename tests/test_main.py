@@ -147,3 +147,23 @@ def test_live_game_rate_limit(monkeypatch):
     assert response.json() == {
         "detail": "Riot API rate limit exceeded. Try again later."
     }
+
+def test_ai_without_api_key(monkeypatch):
+    monkeypatch.setattr(
+        "app.main.OPENAI_API_KEY",
+        None,
+    )
+
+    response = client.get(
+        "/ai-matchup",
+        params={
+            "my_champion": "Malphite",
+            "enemy_champion": "Sett",
+        },
+    )
+
+    data = response.json()
+
+    assert data["found"] is True
+    assert data["ai_generated"] is False
+    assert data["warning"] is not None

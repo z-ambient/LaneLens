@@ -1,8 +1,10 @@
 import requests
+import openai
 from fastapi import FastAPI, HTTPException
-from app.config import DEFAULT_REGION, DEFAULT_ROUTING
+from app.config import DEFAULT_REGION, DEFAULT_ROUTING, OPENAI_API_KEY
 from app.matchup_service import summarize_live_game, get_matchup_data
 from app.riot_client import RiotClient
+from app.ai_agent import format_matchup_advice, generate_ai_matchup_advice
 
 app = FastAPI()
 
@@ -162,4 +164,107 @@ def get_live_matchup(
         "summary": summary,
         "advice_found": advice is not None,
         "advice": advice,
+    }
+
+@app.get("/formatted-matchup")
+def get_formatted_matchup(
+    my_champion: str,
+    enemy_champion: str,
+):
+    advice = get_matchup_data(my_champion, enemy_champion)
+
+    if advice is None:
+        return {
+            "found": False,
+            "my_champion": my_champion,
+            "enemy_champion": enemy_champion,
+        }
+    
+    formatted_advice = format_matchup_advice(
+        my_champion,
+        enemy_champion,
+        advice,
+    )
+
+    return {
+        "found": True,
+        "my_champion": my_champion,
+        "enemy_champion": enemy_champion,
+        "advice": advice,
+        "formatted_advice": formatted_advice,
+    }
+
+@app.get("/ai-matchup")
+def get_ai_matchup(
+    my_champion: str,
+    enemy_champion: str,
+):
+    advice = get_matchup_data(
+        my_champion,
+        enemy_champion,
+    )
+
+    if advice is None:
+        return {
+            "found": False,
+            "my_champion": my_champion,
+            "enemy_champion": enemy_champion,
+        }
+    
+    if not OPENAI_API_KEY:
+        ai_advice = format_matchup_advice(
+            my_champion,
+            enemy_champion,
+            advice
+        )
+
+        ai_generated = False
+        warning = "OpenAI API key missing: using fallback non-AI format"
+    else:
+        try:
+            ai_advice = generate_ai_matchup_advice(
+                my_champion,
+                enemy_champion,
+                advice,
+            )
+
+            ai_generated = True
+            warning = None
+        
+        except openai.AuthenticationError:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service authentication failed.",
+            )
+        
+        except (
+            openai.RateLimitError,
+            openai.APIConnectionError,
+            openai.APITimeoutError,
+            openai.InternalServerError,
+        ):
+            
+            ai_advice = format_matchup_advice(
+                my_champion,
+                enemy_champion,
+                advice,
+            )
+            
+            ai_generated = False
+            warning = ("AI service unavailable: using fallback non-AI format")
+
+        except openai.APIError:
+            raise HTTPException(
+                status_code=502,
+                detail="Unexpected error from AI service.",
+            )
+
+    return {
+        "found": True,
+        "my_champion": my_champion,
+        "enemy_champion": enemy_champion,
+        "advice": advice,
+        "ai_generated": ai_generated,
+        "ai_advice": ai_advice,
+        "warning": warning,
     }
