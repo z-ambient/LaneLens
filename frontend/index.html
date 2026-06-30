@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>LaneLens</title>
+
+        <link rel="stylesheet" href="styles.css">
+        <script src="app.js" defer></script>
+    </head>
+
+    <body>
+        <main>
+            <h1>LaneLens</h1>
+            <p>Cheat sheet for your League of Legends matchup</p>
+
+            <form id="matchup-form">
+                <label for="game-name">Game Name</label>
+                <input
+                id="game-name"
+                name="game_name"
+                type="text"
+                required
+                
+                >
+
+                <label for="tag-line">#</label>
+                <input
+                id="tag-line"
+                name="tag_line"
+                type="text"
+                required
+                >
+
+                <label for="enemy-champion">Enemy champion</label>
+                <input
+                id="enemy-champion"
+                name="enemy_champion"
+                type="text"
+                required
+                >
+
+                <label for="region">Region</label>
+                <select id="region" name="region">
+                    <option value="na1" selected>North America</option>
+                    <option value="euw1">Europe West</option>
+                    <option value="eun1">Europe Nordic & East</option>
+                    <option value="kr">Korea</option>
+                </select>
+
+                <button type="submit">Find Matchup</button>
+            </form>
+
+            <div id="results"></div>
+        </main>
+    </body>
+</html>

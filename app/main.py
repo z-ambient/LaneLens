@@ -1,12 +1,19 @@
 import requests
 import openai
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from app.config import DEFAULT_REGION, DEFAULT_ROUTING, OPENAI_API_KEY
 from app.matchup_service import summarize_live_game, get_matchup_data
 from app.riot_client import RiotClient
 from app.ai_agent import format_matchup_advice, generate_ai_matchup_advice
 
 app = FastAPI()
+
+app.mount(
+    "/ui",
+    StaticFiles(directory="frontend", html=True),
+    name="frontend",
+)
 
 def handle_riot_http_error(error):
     status_code = error.response.status_code
