@@ -8,6 +8,7 @@ The frontend is served as static files from /. The Riot API key never
 leaves this backend.
 """
 
+import os
 from typing import Optional
 
 from fastapi import FastAPI
@@ -227,4 +228,7 @@ def analyze_matchup(body: AnalyzeRequest):
 
 
 # Serve the frontend last so /api/* routes take priority.
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+_FRONTEND_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend"
+)
+app.mount("/", StaticFiles(directory=_FRONTEND_DIR, html=True), name="frontend")

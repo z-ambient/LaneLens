@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LaneLens — Win lane. Play smarter. Know the matchup.</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <h1>Lane<span>Lens</span></h1>
+        <p class="tagline">Win lane. Play smarter. Know the matchup.</p>
+    </header>
+
+    <main>
+        <!-- Search / analyze panel -->
+        <section class="panel search-panel">
+            <form id="analyze-form" novalidate>
+                <div class="form-row">
+                    <div class="form-field grow">
+                        <label for="game-name">Riot Game Name</label>
+                        <input id="game-name" name="gameName" type="text"
+                               placeholder="e.g. Faker" autocomplete="off">
+                    </div>
+                    <div class="form-field tag">
+                        <label for="tag-line">Tagline</label>
+                        <input id="tag-line" name="tagLine" type="text"
+                               placeholder="NA1" autocomplete="off">
+                    </div>
+                    <div class="form-field">
+                        <label for="platform">Region</label>
+                        <select id="platform" name="platform">
+                            <option value="na1" selected>North America</option>
+                            <option value="euw1">Europe West</option>
+                            <option value="eun1">Europe Nordic &amp; East</option>
+                            <option value="kr">Korea</option>
+                            <option value="br1">Brazil</option>
+                            <option value="la1">LAN</option>
+                            <option value="la2">LAS</option>
+                            <option value="oc1">Oceania</option>
+                            <option value="jp1">Japan</option>
+                            <option value="tr1">Türkiye</option>
+                            <option value="ru">Russia</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="analyze-btn" class="btn-gold">Analyze My Matchup</button>
+                    <button type="button" id="demo-btn" class="btn-ghost">Use Demo Match</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Loading -->
+        <section id="loading" class="panel loading-panel hidden" aria-live="polite">
+            <div class="spinner"></div>
+            <p id="loading-message">Looking up Riot account...</p>
+        </section>
+
+        <!-- Errors -->
+        <section id="error" class="panel error-panel hidden" aria-live="polite">
+            <h3>Something went wrong</h3>
+            <p id="error-message"></p>
+            <p class="error-hint">Not in a game right now? Try the <button type="button" id="error-demo-btn" class="link-btn">demo match</button>.</p>
+        </section>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="hidden">
+            <section class="panel matchup-header">
+                <div class="versus" id="versus"></div>
+                <div class="badges" id="matchup-badges"></div>
+                <div id="override-area" class="override-area hidden">
+                    <span>Wrong opponent?</span>
+                    <select id="override-champion"></select>
+                    <select id="override-lane">
+                        <option value="">My lane...</option>
+                        <option>Top</option><option>Jungle</option><option>Mid</option>
+                        <option>Bot</option><option>Support</option>
+                    </select>
+                    <button type="button" id="override-btn" class="btn-ghost small">Re-analyze</button>
+                </div>
+            </section>
+
+            <div class="grid-2">
+                <section class="panel">
+                    <h2>Matchup Overview</h2>
+                    <dl id="overview-list" class="stat-list"></dl>
+                </section>
+
+                <section class="panel priority">
+                    <h2>Lane Matchup Tips</h2>
+                    <dl id="lane-tips-list" class="stat-list"></dl>
+                </section>
+            </div>
+
+            <div class="grid-2">
+                <section class="panel">
+                    <h2>Game Direction</h2>
+                    <dl id="direction-list" class="stat-list"></dl>
+                </section>
+
+                <section class="panel">
+                    <h2>Team Composition</h2>
+                    <div class="teams-grid">
+                        <div class="team-card blue">
+                            <h3>Blue Team</h3>
+                            <ul id="blue-team"></ul>
+                        </div>
+                        <div class="team-card red">
+                            <h3>Red Team</h3>
+                            <ul id="red-team"></ul>
+                        </div>
+                    </div>
+                    <ul id="team-notes" class="team-notes"></ul>
+                </section>
+            </div>
+
+            <section class="panel">
+                <h2>Extra Useful Info</h2>
+                <div id="extra-cards" class="extra-grid"></div>
+            </section>
+
+            <section class="panel tips-panel">
+                <h2>Extra Tips</h2>
+                <ul id="extra-tips"></ul>
+                <p id="source-note" class="source-note"></p>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <p>LaneLens is not endorsed by Riot Games. League of Legends is a trademark of Riot Games, Inc.</p>
+    </footer>
+</body>
+</html>
