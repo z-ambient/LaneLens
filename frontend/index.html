@@ -13,9 +13,6 @@
         <span class="rail-logo">◎</span>
         <nav class="rail-nav">
             <span class="rail-icon active" title="Matchup">⌂</span>
-            <span class="rail-icon" title="Coming soon">⚔</span>
-            <span class="rail-icon" title="Coming soon">▦</span>
-            <span class="rail-icon" title="Coming soon">⚙</span>
         </nav>
     </aside>
 
@@ -65,8 +62,9 @@
             <!-- Dashboard grid -->
             <div id="dashboard" class="dash hidden">
 
-                <!-- Row 1: overview / featured game plan / runes -->
-                <section class="panel overview">
+                <!-- Row 1: big overview + lane tips card / game plan -->
+                <section class="panel main-card">
+                    <img id="ov-splash" class="ov-splash" alt="">
                     <h3>Matchup Overview</h3>
                     <div class="ov-body">
                         <div class="ov-champs">
@@ -80,24 +78,34 @@
                                 <span id="ov-enemy-name"></span>
                             </div>
                         </div>
+                        <div class="ov-side">
+                            <div class="badges" id="matchup-badges"></div>
+                            <div id="override-area" class="override-area hidden">
+                                <span>Wrong opponent?</span>
+                                <div class="override-controls">
+                                    <select id="override-champion"></select>
+                                    <select id="override-lane">
+                                        <option value="">My lane...</option>
+                                        <option>Top</option><option>Jungle</option><option>Mid</option>
+                                        <option>Bot</option><option>Support</option>
+                                    </select>
+                                    <button type="button" id="override-btn" class="btn-ghost small">Re-analyze</button>
+                                </div>
+                            </div>
+                        </div>
                         <div class="diff-ring" id="diff-ring">
-                            <span class="diff-value" id="diff-text">—</span>
-                            <span class="diff-label">Difficulty</span>
+                            <svg viewBox="0 0 100 100" aria-hidden="true">
+                                <circle class="ring-track" cx="50" cy="50" r="42"></circle>
+                                <circle class="ring-fill" cx="50" cy="50" r="42"></circle>
+                            </svg>
+                            <div class="diff-text-wrap">
+                                <span class="diff-value" id="diff-text">—</span>
+                                <span class="diff-label">Difficulty</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="badges" id="matchup-badges"></div>
-                    <div id="override-area" class="override-area hidden">
-                        <span>Wrong opponent?</span>
-                        <div class="override-controls">
-                            <select id="override-champion"></select>
-                            <select id="override-lane">
-                                <option value="">My lane...</option>
-                                <option>Top</option><option>Jungle</option><option>Mid</option>
-                                <option>Bot</option><option>Support</option>
-                            </select>
-                            <button type="button" id="override-btn" class="btn-ghost small">Re-analyze</button>
-                        </div>
-                    </div>
+                    <h3 class="sub-section">Lane Matchup Tips</h3>
+                    <div class="tips-stack" id="lane-tips"></div>
                 </section>
 
                 <section class="panel featured">
@@ -105,32 +113,20 @@
                     <div id="featured-rows" class="featured-rows"></div>
                 </section>
 
-                <section class="panel runes-card">
-                    <h3>Selected Runes</h3>
-                    <div id="runes-row" class="runes-body"></div>
-                </section>
-
-                <!-- Row 2: stat tiles -->
-                <div class="tiles" id="stat-tiles"></div>
-
-                <!-- Row 3: build / lane tips -->
+                <!-- Row 2: full-width recommended build flow -->
                 <section class="panel build">
                     <h3>Recommended Build</h3>
-                    <div class="build-list" id="build-list"></div>
-                    <div id="build-stats" class="build-stats hidden"></div>
+                    <div class="build-flow" id="build-flow"></div>
                     <div class="build-direction" id="build-direction"></div>
                 </section>
 
-                <section class="panel tips">
-                    <h3>Lane Matchup Tips</h3>
-                    <div class="tips-stack" id="lane-tips"></div>
-                </section>
+                <!-- Row 3: stat tiles -->
+                <div class="tiles" id="stat-tiles"></div>
 
-                <!-- Row 4: extra info / teams -->
-                <section class="panel extras">
-                    <h3>Extra Useful Info</h3>
-                    <div id="extra-cards" class="extra-grid"></div>
-                    <p id="source-note" class="source-note"></p>
+                <!-- Row 4: runes / team comp / extra info -->
+                <section class="panel runes-card">
+                    <h3>Selected Runes</h3>
+                    <div id="runes-row" class="runes-body"></div>
                 </section>
 
                 <section class="panel teams">
@@ -146,6 +142,12 @@
                         </div>
                     </div>
                     <ul id="team-notes" class="team-notes"></ul>
+                </section>
+
+                <section class="panel extras">
+                    <h3>Extra Useful Info</h3>
+                    <div id="extra-cards" class="extra-grid"></div>
+                    <p id="source-note" class="source-note"></p>
                 </section>
             </div>
 

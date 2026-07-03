@@ -218,6 +218,16 @@ function renderOverview(data) {
     document.getElementById("ov-enemy-name").textContent =
         data.matchup.enemyChampion || "Unknown";
 
+    // Faded splash art of the player's champion behind the overview card.
+    const splash = document.getElementById("ov-splash");
+    if (me && me.imageKey) {
+        splash.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${me.imageKey}_0.jpg`;
+        splash.style.display = "";
+    } else {
+        splash.removeAttribute("src");
+        splash.style.display = "none";
+    }
+
     const ring = document.getElementById("diff-ring");
     ring.className = "diff-ring";
     const difficulty = data.matchup.difficulty || "—";
@@ -305,6 +315,23 @@ function renderTiles(extras) {
     }
 }
 
+function runeTreeHeader(style, fallback) {
+    const head = el("div", "tree-head");
+    if (style && style.icon) head.appendChild(runeIcon(style, 22));
+    head.appendChild(el("span", "tree-name", style ? style.name : fallback));
+    return head;
+}
+
+function runeRow(rune, isKeystone) {
+    const row = el("div", "rune-row" + (isKeystone ? " keystone" : ""));
+    row.appendChild(runeIcon(rune, isKeystone ? 44 : 28));
+    const meta = el("div", "rune-row-meta");
+    meta.appendChild(el("span", "rune-row-name", rune.name));
+    if (rune.desc) meta.appendChild(el("span", "rune-row-desc", rune.desc));
+    row.appendChild(meta);
+    return row;
+}
+
 function renderRunes(runesData) {
     const body = document.getElementById("runes-row");
     body.replaceChildren();
@@ -315,29 +342,43 @@ function renderRunes(runesData) {
         return;
     }
 
-    const keystone = el("div", "rune-keystone");
-    keystone.appendChild(runeIcon(runesData.keystone, 52));
-    const meta = el("div", "rk-meta");
-    meta.appendChild(el("span", "rk-name", runesData.keystone.name));
-    const styleNames = [runesData.primaryStyle, runesData.subStyle]
-        .filter(Boolean)
-        .map((style) => style.name)
-        .join(" + ");
-    if (styleNames) meta.appendChild(el("span", "rk-styles", styleNames));
-    keystone.appendChild(meta);
-    body.appendChild(keystone);
+    // Oversized keystone icon as a faint decorative background.
+    const bg = runeIcon(runesData.keystone, 240);
+    bg.className = "runes-bg";
+    bg.removeAttribute("title");
+    body.appendChild(bg);
 
-    if (runesData.runes && runesData.runes.length) {
-        const minors = el("div", "rune-minors");
-        runesData.runes.forEach((rune) => minors.appendChild(runeIcon(rune, 30)));
-        body.appendChild(minors);
+    // Spectator perk order: keystone, 3 primary minors, 2 secondary minors.
+    const minors = runesData.runes || [];
+    const primaryMinors = minors.slice(0, 3);
+    const secondaryMinors = minors.slice(3);
+
+    const primary = el("div", "rune-tree");
+    primary.appendChild(runeTreeHeader(runesData.primaryStyle, "Primary"));
+    primary.appendChild(runeRow(runesData.keystone, true));
+    primaryMinors.forEach((rune) => primary.appendChild(runeRow(rune, false)));
+    body.appendChild(primary);
+
+    if (secondaryMinors.length) {
+        const secondary = el("div", "rune-tree secondary");
+        secondary.appendChild(runeTreeHeader(runesData.subStyle, "Secondary"));
+        secondaryMinors.forEach((rune) => secondary.appendChild(runeRow(rune, false)));
+        body.appendChild(secondary);
     }
 
     if (runesData.shards && runesData.shards.length) {
-        const shards = el("div", "rune-shards");
-        runesData.shards.forEach((shard) =>
-            shards.appendChild(el("span", "shard-chip", shard))
-        );
+        const shards = el("div", "rune-tree shards");
+        shards.appendChild(runeTreeHeader(null, "Shards"));
+        runesData.shards.forEach((shard) => {
+            const row = el("div", "rune-row shard");
+            row.appendChild(el("span", "shard-dot", "◆"));
+            const meta = el("div", "rune-row-meta");
+            // Shards may be plain strings (older payloads) or {name, desc}.
+            meta.appendChild(el("span", "rune-row-name", shard.name || shard));
+            if (shard.desc) meta.appendChild(el("span", "rune-row-desc", shard.desc));
+            row.appendChild(meta);
+            shards.appendChild(row);
+        });
         body.appendChild(shards);
     }
 }
@@ -353,28 +394,32 @@ function slotIcon(item, version) {
     return icon;
 }
 
-function buildRow(slot, items, version) {
-    const row = el("div", "build-row");
+// Smooth SVG arrow between build steps.
+function flowArrow() {
+    const wrap = el("span", "flow-arrow");
+    wrap.innerHTML =
+        '<svg viewBox="0 0 34 16" fill="none" aria-hidden="true">' +
+        '<path d="M1 8h30m0 0l-7-6.5M31 8l-7 6.5" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return wrap;
+}
+
+function flowStep(slot, items, version) {
+    const step = el("div", "flow-step");
+    step.appendChild(el("span", "slot-label", slot.label));
 
     // A slot may hold one item or a whole purchase (e.g. starter + potions).
     const purchase = Array.isArray(slot.items) && slot.items.length ? slot.items : [slot.item];
-    const icons = el("div", "row-icons");
+    const icons = el("div", "flow-icons");
     for (const name of purchase) {
         icons.appendChild(slotIcon(findItem(items, name), version));
     }
-    row.appendChild(icons);
-
-    const meta = el("div", "row-meta");
-    meta.append(
-        el("span", "slot-label", slot.label),
-        el("span", "slot-name", purchase.filter(Boolean).join(" + ") || "—")
-    );
-    if (slot.note) meta.appendChild(el("span", "slot-note", "★ " + slot.note));
-    row.appendChild(meta);
+    step.appendChild(icons);
+    step.appendChild(el("span", "flow-name", purchase.filter(Boolean).join(" + ") || "—"));
 
     const options = (slot.options || []).filter(Boolean);
     if (options.length) {
-        const optionRow = el("div", "row-options");
+        const optionRow = el("div", "flow-options");
         optionRow.appendChild(el("span", "or", "or"));
         for (const name of options) {
             const chip = el("span", "option-chip");
@@ -383,14 +428,14 @@ function buildRow(slot, items, version) {
             chip.appendChild(el("span", null, name));
             optionRow.appendChild(chip);
         }
-        row.appendChild(optionRow);
+        step.appendChild(optionRow);
     }
-    return row;
+    return step;
 }
 
 function renderBuild(advice, items, version) {
-    const list = document.getElementById("build-list");
-    list.replaceChildren();
+    const flow = document.getElementById("build-flow");
+    flow.replaceChildren();
 
     const slots = Array.isArray(advice.fullBuild) && advice.fullBuild.length
         ? advice.fullBuild
@@ -399,42 +444,15 @@ function renderBuild(advice, items, version) {
               { label: "Boots", item: advice.boots, options: [] },
               { label: "First Item", item: advice.firstItem, options: [] },
           ];
-    for (const slot of slots) {
-        list.appendChild(buildRow(slot, items, version));
-    }
+    slots.forEach((slot, index) => {
+        if (index > 0) flow.appendChild(flowArrow());
+        flow.appendChild(flowStep(slot, items, version));
+    });
 
     const direction = document.getElementById("build-direction");
     direction.replaceChildren();
     direction.appendChild(el("span", "slot-label", "Why this build"));
     direction.appendChild(el("p", null, advice.buildDirection || "—"));
-}
-
-function renderBuildStats(stats, items, version) {
-    const box = document.getElementById("build-stats");
-    box.replaceChildren();
-    if (!stats || !stats.topItems || !stats.topItems.length) {
-        box.classList.add("hidden");
-        return;
-    }
-    box.classList.remove("hidden");
-
-    box.appendChild(
-        el(
-            "span",
-            "stats-label",
-            `From your last ${stats.gamesAnalyzed} game${stats.gamesAnalyzed === 1 ? "" : "s"} ` +
-                `on this champion (${stats.wins}W ${stats.gamesAnalyzed - stats.wins}L) — items you actually finished:`
-        )
-    );
-    const chips = el("div", "stats-chips");
-    for (const entry of stats.topItems) {
-        const chip = el("span", "option-chip stat-chip");
-        const match = entry.name ? findItem(items, entry.name) : null;
-        if (match) chip.appendChild(itemIcon(match.id, version));
-        chip.appendChild(el("span", null, `${entry.name || "Item " + entry.itemId} ×${entry.games}`));
-        chips.appendChild(chip);
-    }
-    box.appendChild(chips);
 }
 
 const TIP_GLYPHS = {
@@ -484,9 +502,12 @@ function renderTeam(listId, members, version) {
     }
 }
 
-function extraCard(title, content) {
+function extraCard(title, content, glyph, colorClass) {
     const card = el("div", "extra-card");
-    card.appendChild(el("h4", null, title));
+    const head = el("div", "extra-head");
+    head.appendChild(el("span", "extra-glyph " + (colorClass || "g-gold"), glyph || "▸"));
+    head.appendChild(el("h4", null, title));
+    card.appendChild(head);
     if (Array.isArray(content)) {
         const list = el("ul");
         content.forEach((entry) => list.appendChild(el("li", null, entry)));
@@ -511,7 +532,6 @@ async function renderDashboard(data) {
     renderTiles(extras);
     renderRunes(data.runes);
     renderBuild(advice, items, data.ddragonVersion);
-    renderBuildStats(data.buildStats, items, data.ddragonVersion);
     renderLaneTips(advice);
 
     renderTeam("blue-team", data.teams.blue, data.ddragonVersion);
@@ -526,19 +546,21 @@ async function renderDashboard(data) {
     const extraCards = document.getElementById("extra-cards");
     extraCards.replaceChildren();
     const cards = [
-        ["Jungle threat", extras.jungleThreat],
-        ["Best recall timing", extras.recallTiming],
-        ["First 10 minutes", extras.first10Min],
-        ["Who to avoid", extras.avoidTarget],
-        ["Itemization warnings", extras.itemWarnings],
+        ["Jungle threat", extras.jungleThreat, "◈", "g-red", false],
+        ["Best recall timing", extras.recallTiming, "↺", "g-gold", false],
+        ["First 10 minutes", extras.first10Min, "◔", "g-blue", false],
+        ["Who to avoid", extras.avoidTarget, "✕", "g-red", false],
+        ["Itemization warnings", extras.itemWarnings, "!", "g-gold", true],
     ];
-    for (const [title, content] of cards) {
+    for (const [title, content, glyph, color, span] of cards) {
         if (content && (!Array.isArray(content) || content.length)) {
-            extraCards.appendChild(extraCard(title, content));
+            const card = extraCard(title, content, glyph, color);
+            if (span) card.classList.add("span-all");
+            extraCards.appendChild(card);
         }
     }
     if (advice.extraTips && advice.extraTips.length) {
-        const tipsCard = extraCard("Quick tips", advice.extraTips);
+        const tipsCard = extraCard("Quick tips", advice.extraTips, "★", "g-green");
         tipsCard.classList.add("span-all");
         extraCards.appendChild(tipsCard);
     }
