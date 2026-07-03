@@ -1,0 +1,1693 @@
+{
+ "version": "16.13.1",
+ "champions": {
+  "266": {
+   "name": "Aatrox",
+   "id": "Aatrox",
+   "tags": [
+    "Fighter"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "103": {
+   "name": "Ahri",
+   "id": "Ahri",
+   "tags": [
+    "Mage",
+    "Assassin"
+   ],
+   "attack": 3,
+   "magic": 8
+  },
+  "84": {
+   "name": "Akali",
+   "id": "Akali",
+   "tags": [
+    "Assassin"
+   ],
+   "attack": 5,
+   "magic": 8
+  },
+  "166": {
+   "name": "Akshan",
+   "id": "Akshan",
+   "tags": [
+    "Marksman",
+    "Assassin"
+   ],
+   "attack": 0,
+   "magic": 0
+  },
+  "12": {
+   "name": "Alistar",
+   "id": "Alistar",
+   "tags": [
+    "Tank",
+    "Support"
+   ],
+   "attack": 6,
+   "magic": 5
+  },
+  "799": {
+   "name": "Ambessa",
+   "id": "Ambessa",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 0
+  },
+  "32": {
+   "name": "Amumu",
+   "id": "Amumu",
+   "tags": [
+    "Tank",
+    "Support"
+   ],
+   "attack": 2,
+   "magic": 8
+  },
+  "34": {
+   "name": "Anivia",
+   "id": "Anivia",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 1,
+   "magic": 10
+  },
+  "1": {
+   "name": "Annie",
+   "id": "Annie",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 2,
+   "magic": 10
+  },
+  "523": {
+   "name": "Aphelios",
+   "id": "Aphelios",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 6,
+   "magic": 1
+  },
+  "22": {
+   "name": "Ashe",
+   "id": "Ashe",
+   "tags": [
+    "Marksman",
+    "Support"
+   ],
+   "attack": 7,
+   "magic": 2
+  },
+  "136": {
+   "name": "Aurelion Sol",
+   "id": "AurelionSol",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 8
+  },
+  "893": {
+   "name": "Aurora",
+   "id": "Aurora",
+   "tags": [
+    "Mage",
+    "Assassin"
+   ],
+   "attack": 3,
+   "magic": 8
+  },
+  "268": {
+   "name": "Azir",
+   "id": "Azir",
+   "tags": [
+    "Mage",
+    "Marksman"
+   ],
+   "attack": 6,
+   "magic": 8
+  },
+  "432": {
+   "name": "Bard",
+   "id": "Bard",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 4,
+   "magic": 5
+  },
+  "200": {
+   "name": "Bel'Veth",
+   "id": "Belveth",
+   "tags": [
+    "Fighter"
+   ],
+   "attack": 4,
+   "magic": 7
+  },
+  "53": {
+   "name": "Blitzcrank",
+   "id": "Blitzcrank",
+   "tags": [
+    "Tank",
+    "Support"
+   ],
+   "attack": 4,
+   "magic": 5
+  },
+  "63": {
+   "name": "Brand",
+   "id": "Brand",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 2,
+   "magic": 9
+  },
+  "201": {
+   "name": "Braum",
+   "id": "Braum",
+   "tags": [
+    "Tank",
+    "Support"
+   ],
+   "attack": 3,
+   "magic": 4
+  },
+  "233": {
+   "name": "Briar",
+   "id": "Briar",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 3
+  },
+  "51": {
+   "name": "Caitlyn",
+   "id": "Caitlyn",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 8,
+   "magic": 2
+  },
+  "164": {
+   "name": "Camille",
+   "id": "Camille",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "69": {
+   "name": "Cassiopeia",
+   "id": "Cassiopeia",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 9
+  },
+  "31": {
+   "name": "Cho'Gath",
+   "id": "Chogath",
+   "tags": [
+    "Tank",
+    "Mage"
+   ],
+   "attack": 3,
+   "magic": 7
+  },
+  "42": {
+   "name": "Corki",
+   "id": "Corki",
+   "tags": [
+    "Marksman",
+    "Mage"
+   ],
+   "attack": 8,
+   "magic": 6
+  },
+  "122": {
+   "name": "Darius",
+   "id": "Darius",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 9,
+   "magic": 1
+  },
+  "131": {
+   "name": "Diana",
+   "id": "Diana",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 7,
+   "magic": 8
+  },
+  "119": {
+   "name": "Draven",
+   "id": "Draven",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 9,
+   "magic": 1
+  },
+  "36": {
+   "name": "Dr. Mundo",
+   "id": "DrMundo",
+   "tags": [
+    "Tank",
+    "Fighter"
+   ],
+   "attack": 5,
+   "magic": 6
+  },
+  "245": {
+   "name": "Ekko",
+   "id": "Ekko",
+   "tags": [
+    "Assassin",
+    "Mage"
+   ],
+   "attack": 5,
+   "magic": 7
+  },
+  "60": {
+   "name": "Elise",
+   "id": "Elise",
+   "tags": [
+    "Assassin",
+    "Mage"
+   ],
+   "attack": 6,
+   "magic": 7
+  },
+  "28": {
+   "name": "Evelynn",
+   "id": "Evelynn",
+   "tags": [
+    "Assassin",
+    "Mage"
+   ],
+   "attack": 4,
+   "magic": 7
+  },
+  "81": {
+   "name": "Ezreal",
+   "id": "Ezreal",
+   "tags": [
+    "Marksman",
+    "Mage"
+   ],
+   "attack": 7,
+   "magic": 6
+  },
+  "9": {
+   "name": "Fiddlesticks",
+   "id": "Fiddlesticks",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 2,
+   "magic": 9
+  },
+  "114": {
+   "name": "Fiora",
+   "id": "Fiora",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 10,
+   "magic": 2
+  },
+  "105": {
+   "name": "Fizz",
+   "id": "Fizz",
+   "tags": [
+    "Assassin",
+    "Fighter"
+   ],
+   "attack": 6,
+   "magic": 7
+  },
+  "3": {
+   "name": "Galio",
+   "id": "Galio",
+   "tags": [
+    "Tank",
+    "Mage"
+   ],
+   "attack": 1,
+   "magic": 6
+  },
+  "41": {
+   "name": "Gangplank",
+   "id": "Gangplank",
+   "tags": [
+    "Fighter"
+   ],
+   "attack": 7,
+   "magic": 4
+  },
+  "86": {
+   "name": "Garen",
+   "id": "Garen",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 7,
+   "magic": 1
+  },
+  "150": {
+   "name": "Gnar",
+   "id": "Gnar",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 6,
+   "magic": 5
+  },
+  "79": {
+   "name": "Gragas",
+   "id": "Gragas",
+   "tags": [
+    "Fighter",
+    "Mage"
+   ],
+   "attack": 4,
+   "magic": 6
+  },
+  "104": {
+   "name": "Graves",
+   "id": "Graves",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "887": {
+   "name": "Gwen",
+   "id": "Gwen",
+   "tags": [
+    "Fighter"
+   ],
+   "attack": 7,
+   "magic": 5
+  },
+  "120": {
+   "name": "Hecarim",
+   "id": "Hecarim",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 8,
+   "magic": 4
+  },
+  "74": {
+   "name": "Heimerdinger",
+   "id": "Heimerdinger",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 2,
+   "magic": 8
+  },
+  "910": {
+   "name": "Hwei",
+   "id": "Hwei",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 7,
+   "magic": 8
+  },
+  "420": {
+   "name": "Illaoi",
+   "id": "Illaoi",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "39": {
+   "name": "Irelia",
+   "id": "Irelia",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 7,
+   "magic": 5
+  },
+  "427": {
+   "name": "Ivern",
+   "id": "Ivern",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 3,
+   "magic": 7
+  },
+  "40": {
+   "name": "Janna",
+   "id": "Janna",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 3,
+   "magic": 7
+  },
+  "59": {
+   "name": "Jarvan IV",
+   "id": "JarvanIV",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 6,
+   "magic": 3
+  },
+  "24": {
+   "name": "Jax",
+   "id": "Jax",
+   "tags": [
+    "Fighter"
+   ],
+   "attack": 7,
+   "magic": 7
+  },
+  "126": {
+   "name": "Jayce",
+   "id": "Jayce",
+   "tags": [
+    "Fighter",
+    "Marksman"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "202": {
+   "name": "Jhin",
+   "id": "Jhin",
+   "tags": [
+    "Marksman",
+    "Mage"
+   ],
+   "attack": 10,
+   "magic": 6
+  },
+  "222": {
+   "name": "Jinx",
+   "id": "Jinx",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 9,
+   "magic": 4
+  },
+  "145": {
+   "name": "Kai'Sa",
+   "id": "Kaisa",
+   "tags": [
+    "Marksman",
+    "Mage"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "429": {
+   "name": "Kalista",
+   "id": "Kalista",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 8,
+   "magic": 4
+  },
+  "43": {
+   "name": "Karma",
+   "id": "Karma",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 1,
+   "magic": 8
+  },
+  "30": {
+   "name": "Karthus",
+   "id": "Karthus",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 10
+  },
+  "38": {
+   "name": "Kassadin",
+   "id": "Kassadin",
+   "tags": [
+    "Assassin",
+    "Mage"
+   ],
+   "attack": 3,
+   "magic": 8
+  },
+  "55": {
+   "name": "Katarina",
+   "id": "Katarina",
+   "tags": [
+    "Assassin",
+    "Mage"
+   ],
+   "attack": 4,
+   "magic": 9
+  },
+  "10": {
+   "name": "Kayle",
+   "id": "Kayle",
+   "tags": [
+    "Mage",
+    "Marksman"
+   ],
+   "attack": 6,
+   "magic": 7
+  },
+  "141": {
+   "name": "Kayn",
+   "id": "Kayn",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 10,
+   "magic": 1
+  },
+  "85": {
+   "name": "Kennen",
+   "id": "Kennen",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 6,
+   "magic": 7
+  },
+  "121": {
+   "name": "Kha'Zix",
+   "id": "Khazix",
+   "tags": [
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 3
+  },
+  "203": {
+   "name": "Kindred",
+   "id": "Kindred",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 8,
+   "magic": 2
+  },
+  "240": {
+   "name": "Kled",
+   "id": "Kled",
+   "tags": [
+    "Fighter"
+   ],
+   "attack": 8,
+   "magic": 2
+  },
+  "96": {
+   "name": "Kog'Maw",
+   "id": "KogMaw",
+   "tags": [
+    "Marksman",
+    "Mage"
+   ],
+   "attack": 8,
+   "magic": 5
+  },
+  "897": {
+   "name": "K'Sante",
+   "id": "KSante",
+   "tags": [
+    "Tank",
+    "Fighter"
+   ],
+   "attack": 8,
+   "magic": 7
+  },
+  "7": {
+   "name": "LeBlanc",
+   "id": "Leblanc",
+   "tags": [
+    "Assassin",
+    "Mage"
+   ],
+   "attack": 1,
+   "magic": 10
+  },
+  "64": {
+   "name": "Lee Sin",
+   "id": "LeeSin",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "89": {
+   "name": "Leona",
+   "id": "Leona",
+   "tags": [
+    "Tank",
+    "Support"
+   ],
+   "attack": 4,
+   "magic": 3
+  },
+  "876": {
+   "name": "Lillia",
+   "id": "Lillia",
+   "tags": [
+    "Fighter",
+    "Mage"
+   ],
+   "attack": 0,
+   "magic": 10
+  },
+  "127": {
+   "name": "Lissandra",
+   "id": "Lissandra",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 8
+  },
+  "805": {
+   "name": "Locke",
+   "id": "Locke",
+   "tags": [
+    "Assassin",
+    "Mage"
+   ],
+   "attack": 6,
+   "magic": 2
+  },
+  "236": {
+   "name": "Lucian",
+   "id": "Lucian",
+   "tags": [
+    "Marksman",
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "117": {
+   "name": "Lulu",
+   "id": "Lulu",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 4,
+   "magic": 7
+  },
+  "99": {
+   "name": "Lux",
+   "id": "Lux",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 2,
+   "magic": 9
+  },
+  "54": {
+   "name": "Malphite",
+   "id": "Malphite",
+   "tags": [
+    "Tank",
+    "Mage"
+   ],
+   "attack": 5,
+   "magic": 7
+  },
+  "90": {
+   "name": "Malzahar",
+   "id": "Malzahar",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 9
+  },
+  "57": {
+   "name": "Maokai",
+   "id": "Maokai",
+   "tags": [
+    "Tank",
+    "Support"
+   ],
+   "attack": 3,
+   "magic": 6
+  },
+  "11": {
+   "name": "Master Yi",
+   "id": "MasterYi",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 10,
+   "magic": 2
+  },
+  "800": {
+   "name": "Mel",
+   "id": "Mel",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 2,
+   "magic": 9
+  },
+  "902": {
+   "name": "Milio",
+   "id": "Milio",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 8
+  },
+  "21": {
+   "name": "Miss Fortune",
+   "id": "MissFortune",
+   "tags": [
+    "Marksman",
+    "Mage"
+   ],
+   "attack": 8,
+   "magic": 5
+  },
+  "62": {
+   "name": "Wukong",
+   "id": "MonkeyKing",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 8,
+   "magic": 2
+  },
+  "82": {
+   "name": "Mordekaiser",
+   "id": "Mordekaiser",
+   "tags": [
+    "Fighter",
+    "Mage"
+   ],
+   "attack": 4,
+   "magic": 7
+  },
+  "25": {
+   "name": "Morgana",
+   "id": "Morgana",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 1,
+   "magic": 8
+  },
+  "950": {
+   "name": "Naafiri",
+   "id": "Naafiri",
+   "tags": [
+    "Assassin",
+    "Fighter"
+   ],
+   "attack": 9,
+   "magic": 0
+  },
+  "267": {
+   "name": "Nami",
+   "id": "Nami",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 4,
+   "magic": 7
+  },
+  "75": {
+   "name": "Nasus",
+   "id": "Nasus",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 7,
+   "magic": 6
+  },
+  "111": {
+   "name": "Nautilus",
+   "id": "Nautilus",
+   "tags": [
+    "Tank",
+    "Support"
+   ],
+   "attack": 4,
+   "magic": 6
+  },
+  "518": {
+   "name": "Neeko",
+   "id": "Neeko",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 1,
+   "magic": 9
+  },
+  "76": {
+   "name": "Nidalee",
+   "id": "Nidalee",
+   "tags": [
+    "Assassin",
+    "Mage"
+   ],
+   "attack": 5,
+   "magic": 7
+  },
+  "895": {
+   "name": "Nilah",
+   "id": "Nilah",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 4
+  },
+  "56": {
+   "name": "Nocturne",
+   "id": "Nocturne",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 2
+  },
+  "20": {
+   "name": "Nunu & Willump",
+   "id": "Nunu",
+   "tags": [
+    "Tank",
+    "Mage"
+   ],
+   "attack": 4,
+   "magic": 7
+  },
+  "2": {
+   "name": "Olaf",
+   "id": "Olaf",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 9,
+   "magic": 3
+  },
+  "61": {
+   "name": "Orianna",
+   "id": "Orianna",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 4,
+   "magic": 9
+  },
+  "516": {
+   "name": "Ornn",
+   "id": "Ornn",
+   "tags": [
+    "Tank"
+   ],
+   "attack": 5,
+   "magic": 3
+  },
+  "80": {
+   "name": "Pantheon",
+   "id": "Pantheon",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 3
+  },
+  "78": {
+   "name": "Poppy",
+   "id": "Poppy",
+   "tags": [
+    "Tank",
+    "Fighter"
+   ],
+   "attack": 6,
+   "magic": 2
+  },
+  "555": {
+   "name": "Pyke",
+   "id": "Pyke",
+   "tags": [
+    "Support",
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 1
+  },
+  "246": {
+   "name": "Qiyana",
+   "id": "Qiyana",
+   "tags": [
+    "Assassin"
+   ],
+   "attack": 0,
+   "magic": 4
+  },
+  "133": {
+   "name": "Quinn",
+   "id": "Quinn",
+   "tags": [
+    "Marksman",
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 2
+  },
+  "497": {
+   "name": "Rakan",
+   "id": "Rakan",
+   "tags": [
+    "Support"
+   ],
+   "attack": 2,
+   "magic": 8
+  },
+  "33": {
+   "name": "Rammus",
+   "id": "Rammus",
+   "tags": [
+    "Tank"
+   ],
+   "attack": 4,
+   "magic": 5
+  },
+  "421": {
+   "name": "Rek'Sai",
+   "id": "RekSai",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 8,
+   "magic": 2
+  },
+  "526": {
+   "name": "Rell",
+   "id": "Rell",
+   "tags": [
+    "Tank",
+    "Support"
+   ],
+   "attack": 0,
+   "magic": 0
+  },
+  "888": {
+   "name": "Renata Glasc",
+   "id": "Renata",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 9
+  },
+  "58": {
+   "name": "Renekton",
+   "id": "Renekton",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 8,
+   "magic": 2
+  },
+  "107": {
+   "name": "Rengar",
+   "id": "Rengar",
+   "tags": [
+    "Assassin",
+    "Fighter"
+   ],
+   "attack": 7,
+   "magic": 2
+  },
+  "92": {
+   "name": "Riven",
+   "id": "Riven",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 1
+  },
+  "68": {
+   "name": "Rumble",
+   "id": "Rumble",
+   "tags": [
+    "Fighter",
+    "Mage"
+   ],
+   "attack": 3,
+   "magic": 8
+  },
+  "13": {
+   "name": "Ryze",
+   "id": "Ryze",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 10
+  },
+  "360": {
+   "name": "Samira",
+   "id": "Samira",
+   "tags": [
+    "Marksman",
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "113": {
+   "name": "Sejuani",
+   "id": "Sejuani",
+   "tags": [
+    "Tank"
+   ],
+   "attack": 5,
+   "magic": 6
+  },
+  "235": {
+   "name": "Senna",
+   "id": "Senna",
+   "tags": [
+    "Support",
+    "Marksman"
+   ],
+   "attack": 7,
+   "magic": 6
+  },
+  "147": {
+   "name": "Seraphine",
+   "id": "Seraphine",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 0,
+   "magic": 0
+  },
+  "875": {
+   "name": "Sett",
+   "id": "Sett",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 8,
+   "magic": 1
+  },
+  "35": {
+   "name": "Shaco",
+   "id": "Shaco",
+   "tags": [
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 6
+  },
+  "98": {
+   "name": "Shen",
+   "id": "Shen",
+   "tags": [
+    "Tank"
+   ],
+   "attack": 3,
+   "magic": 3
+  },
+  "102": {
+   "name": "Shyvana",
+   "id": "Shyvana",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "27": {
+   "name": "Singed",
+   "id": "Singed",
+   "tags": [
+    "Tank",
+    "Mage"
+   ],
+   "attack": 4,
+   "magic": 7
+  },
+  "14": {
+   "name": "Sion",
+   "id": "Sion",
+   "tags": [
+    "Tank",
+    "Fighter"
+   ],
+   "attack": 5,
+   "magic": 3
+  },
+  "15": {
+   "name": "Sivir",
+   "id": "Sivir",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 9,
+   "magic": 1
+  },
+  "72": {
+   "name": "Skarner",
+   "id": "Skarner",
+   "tags": [
+    "Tank",
+    "Fighter"
+   ],
+   "attack": 7,
+   "magic": 5
+  },
+  "901": {
+   "name": "Smolder",
+   "id": "Smolder",
+   "tags": [
+    "Marksman",
+    "Mage"
+   ],
+   "attack": 8,
+   "magic": 5
+  },
+  "37": {
+   "name": "Sona",
+   "id": "Sona",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 5,
+   "magic": 8
+  },
+  "16": {
+   "name": "Soraka",
+   "id": "Soraka",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 7
+  },
+  "50": {
+   "name": "Swain",
+   "id": "Swain",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 2,
+   "magic": 9
+  },
+  "517": {
+   "name": "Sylas",
+   "id": "Sylas",
+   "tags": [
+    "Mage",
+    "Assassin"
+   ],
+   "attack": 3,
+   "magic": 8
+  },
+  "134": {
+   "name": "Syndra",
+   "id": "Syndra",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 9
+  },
+  "223": {
+   "name": "Tahm Kench",
+   "id": "TahmKench",
+   "tags": [
+    "Tank",
+    "Support"
+   ],
+   "attack": 3,
+   "magic": 6
+  },
+  "163": {
+   "name": "Taliyah",
+   "id": "Taliyah",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 1,
+   "magic": 8
+  },
+  "91": {
+   "name": "Talon",
+   "id": "Talon",
+   "tags": [
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 1
+  },
+  "44": {
+   "name": "Taric",
+   "id": "Taric",
+   "tags": [
+    "Support",
+    "Tank"
+   ],
+   "attack": 4,
+   "magic": 5
+  },
+  "17": {
+   "name": "Teemo",
+   "id": "Teemo",
+   "tags": [
+    "Marksman",
+    "Mage"
+   ],
+   "attack": 5,
+   "magic": 7
+  },
+  "412": {
+   "name": "Thresh",
+   "id": "Thresh",
+   "tags": [
+    "Support",
+    "Tank"
+   ],
+   "attack": 5,
+   "magic": 6
+  },
+  "18": {
+   "name": "Tristana",
+   "id": "Tristana",
+   "tags": [
+    "Marksman",
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 5
+  },
+  "48": {
+   "name": "Trundle",
+   "id": "Trundle",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 7,
+   "magic": 2
+  },
+  "23": {
+   "name": "Tryndamere",
+   "id": "Tryndamere",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 10,
+   "magic": 2
+  },
+  "4": {
+   "name": "Twisted Fate",
+   "id": "TwistedFate",
+   "tags": [
+    "Mage",
+    "Marksman"
+   ],
+   "attack": 6,
+   "magic": 6
+  },
+  "29": {
+   "name": "Twitch",
+   "id": "Twitch",
+   "tags": [
+    "Marksman",
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 3
+  },
+  "77": {
+   "name": "Udyr",
+   "id": "Udyr",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 8,
+   "magic": 4
+  },
+  "6": {
+   "name": "Urgot",
+   "id": "Urgot",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "110": {
+   "name": "Varus",
+   "id": "Varus",
+   "tags": [
+    "Marksman",
+    "Mage"
+   ],
+   "attack": 7,
+   "magic": 4
+  },
+  "67": {
+   "name": "Vayne",
+   "id": "Vayne",
+   "tags": [
+    "Marksman",
+    "Assassin"
+   ],
+   "attack": 10,
+   "magic": 1
+  },
+  "45": {
+   "name": "Veigar",
+   "id": "Veigar",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 10
+  },
+  "161": {
+   "name": "Vel'Koz",
+   "id": "Velkoz",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 2,
+   "magic": 10
+  },
+  "711": {
+   "name": "Vex",
+   "id": "Vex",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 0,
+   "magic": 0
+  },
+  "254": {
+   "name": "Vi",
+   "id": "Vi",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "234": {
+   "name": "Viego",
+   "id": "Viego",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 6,
+   "magic": 2
+  },
+  "112": {
+   "name": "Viktor",
+   "id": "Viktor",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 10
+  },
+  "8": {
+   "name": "Vladimir",
+   "id": "Vladimir",
+   "tags": [
+    "Mage",
+    "Fighter"
+   ],
+   "attack": 2,
+   "magic": 8
+  },
+  "106": {
+   "name": "Volibear",
+   "id": "Volibear",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 7,
+   "magic": 4
+  },
+  "19": {
+   "name": "Warwick",
+   "id": "Warwick",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 9,
+   "magic": 3
+  },
+  "498": {
+   "name": "Xayah",
+   "id": "Xayah",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 10,
+   "magic": 1
+  },
+  "101": {
+   "name": "Xerath",
+   "id": "Xerath",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 1,
+   "magic": 10
+  },
+  "5": {
+   "name": "Xin Zhao",
+   "id": "XinZhao",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "157": {
+   "name": "Yasuo",
+   "id": "Yasuo",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 4
+  },
+  "777": {
+   "name": "Yone",
+   "id": "Yone",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 4
+  },
+  "83": {
+   "name": "Yorick",
+   "id": "Yorick",
+   "tags": [
+    "Fighter",
+    "Tank"
+   ],
+   "attack": 6,
+   "magic": 4
+  },
+  "804": {
+   "name": "Yunara",
+   "id": "Yunara",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 9,
+   "magic": 0
+  },
+  "350": {
+   "name": "Yuumi",
+   "id": "Yuumi",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 5,
+   "magic": 8
+  },
+  "904": {
+   "name": "Zaahen",
+   "id": "Zaahen",
+   "tags": [
+    "Fighter",
+    "Assassin"
+   ],
+   "attack": 8,
+   "magic": 1
+  },
+  "154": {
+   "name": "Zac",
+   "id": "Zac",
+   "tags": [
+    "Tank",
+    "Fighter"
+   ],
+   "attack": 3,
+   "magic": 7
+  },
+  "238": {
+   "name": "Zed",
+   "id": "Zed",
+   "tags": [
+    "Assassin"
+   ],
+   "attack": 9,
+   "magic": 1
+  },
+  "221": {
+   "name": "Zeri",
+   "id": "Zeri",
+   "tags": [
+    "Marksman"
+   ],
+   "attack": 8,
+   "magic": 3
+  },
+  "115": {
+   "name": "Ziggs",
+   "id": "Ziggs",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 9
+  },
+  "26": {
+   "name": "Zilean",
+   "id": "Zilean",
+   "tags": [
+    "Support",
+    "Mage"
+   ],
+   "attack": 2,
+   "magic": 8
+  },
+  "142": {
+   "name": "Zoe",
+   "id": "Zoe",
+   "tags": [
+    "Mage"
+   ],
+   "attack": 1,
+   "magic": 8
+  },
+  "143": {
+   "name": "Zyra",
+   "id": "Zyra",
+   "tags": [
+    "Mage",
+    "Support"
+   ],
+   "attack": 4,
+   "magic": 8
+  }
+ }
+}
