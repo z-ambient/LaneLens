@@ -7,9 +7,12 @@ page for the live game. Loaded lazily; failures degrade to None so an
 analysis never fails because of runes.
 """
 
+import logging
 import re
 
 import requests
+
+logger = logging.getLogger("uvicorn.error")
 
 _cache = {"styles": None, "runes": None}
 
@@ -79,8 +82,13 @@ def extract_runes(perks):
     if not perks or not perks.get("perkIds") or not _ensure_loaded():
         return None
 
+    # Diagnostic: Spectator-v5 is known to expose partial rune data for live
+    # games - this shows exactly what Riot sent (rune choices, not secrets).
+    logger.info("Spectator perks received: perkIds=%s perkStyle=%s perkSubStyle=%s",
+                perks.get("perkIds"), perks.get("perkStyle"), perks.get("perkSubStyle"))
+
     styles = _cache["styles"]
-    runes, shards = [], []
+    runes, shards, unknown = [], [], []
     for perk_id in perks["perkIds"]:
         if perk_id in STAT_SHARDS:
             shards.append(dict(STAT_SHARDS[perk_id]))
@@ -88,7 +96,11 @@ def extract_runes(perks):
         info = _cache["runes"].get(perk_id)
         if info:
             runes.append(dict(info))
+        else:
+            unknown.append(perk_id)
 
+    if unknown:
+        logger.info("Spectator perk IDs not found in Data Dragon: %s", unknown)
     if not runes:
         return None
 
@@ -99,4 +111,7 @@ def extract_runes(perks):
         "shards": shards,
         "primaryStyle": styles.get(perks.get("perkStyle")),
         "subStyle": styles.get(perks.get("perkSubStyle")),
+        # Full rune page = keystone + 5 minors; flag anything less so the
+        # UI can say the live API only shared part of the page.
+        "partial": len(runes) < 6,
     }
