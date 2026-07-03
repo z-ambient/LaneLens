@@ -16,12 +16,13 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app import champions
+from app import champions, runes
 from app.advice_engine import build_advice, build_team_notes
 from app.ai_agent import refine_advice_with_ai
 from app.config import DEFAULT_PLATFORM, REGION_BY_PLATFORM, riot_key_present
 from app.demo import get_demo_response
 from app.lane_detection import assign_lanes, find_lane_opponent
+from app.match_stats import get_recent_build_stats, promote_common_items
 from app.riot_client import RiotApiError, RiotClient
 
 app = FastAPI(title="LaneLens")
@@ -176,6 +177,12 @@ def analyze_matchup(body: AnalyzeRequest):
         my_champ, enemy_champ, my_lane, my_team_champs, enemy_team_champs
     )
 
+    # Step 7: real data - the player's selected runes for THIS game
+    # (Spectator perks) and their actual builds from recent matches (Match-v5).
+    selected_runes = runes.extract_runes(me.get("perks"))
+    build_stats = get_recent_build_stats(client, puuid, me["championId"], region)
+    advice["fullBuild"] = promote_common_items(advice["fullBuild"], build_stats)
+
     ai_advice = refine_advice_with_ai(
         {
             "myChampion": my_champ["name"],
@@ -184,6 +191,8 @@ def analyze_matchup(body: AnalyzeRequest):
             "myTeam": [champ["name"] for champ in my_team_champs],
             "enemyTeam": [champ["name"] for champ in enemy_team_champs],
             "queue": QUEUE_NAMES.get(game.get("gameQueueConfigId"), "Unknown queue"),
+            "selectedRunes": selected_runes,
+            "recentMatchStats": build_stats,
         },
         advice,
     )
@@ -223,6 +232,8 @@ def analyze_matchup(body: AnalyzeRequest):
             ],
         },
         "teamNotes": build_team_notes(my_team_champs, enemy_team_champs),
+        "runes": selected_runes,
+        "buildStats": build_stats,
         "advice": advice,
     }
 

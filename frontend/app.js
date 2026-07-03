@@ -280,12 +280,18 @@ function buildSlotCard(slot, items, version) {
     const card = el("div", "build-slot");
     card.appendChild(el("span", "slot-label", slot.label));
 
+    // A slot may hold one item or a whole purchase (e.g. starter + potions).
+    const purchase = Array.isArray(slot.items) && slot.items.length ? slot.items : [slot.item];
     const main = el("div", "slot-main");
-    main.append(
-        slotIcon(findItem(items, slot.item), version),
-        el("span", "slot-name", slot.item || "—")
-    );
+    for (const name of purchase) {
+        main.appendChild(slotIcon(findItem(items, name), version));
+    }
+    main.appendChild(el("span", "slot-name", purchase.filter(Boolean).join(" + ") || "—"));
     card.appendChild(main);
+
+    if (slot.note) {
+        card.appendChild(el("span", "slot-note", "★ " + slot.note));
+    }
 
     const options = (slot.options || []).filter(Boolean);
     if (options.length) {
@@ -301,6 +307,85 @@ function buildSlotCard(slot, items, version) {
         card.appendChild(row);
     }
     return card;
+}
+
+function runeIcon(rune, size, title) {
+    const img = document.createElement("img");
+    img.width = size;
+    img.height = size;
+    img.alt = title || rune.name;
+    img.title = title || rune.name;
+    img.src = `https://ddragon.leagueoflegends.com/cdn/img/${rune.icon}`;
+    return img;
+}
+
+function renderRunes(runesData) {
+    const row = document.getElementById("runes-row");
+    row.replaceChildren();
+    if (!runesData || !runesData.keystone) {
+        row.classList.add("hidden");
+        return;
+    }
+    row.classList.remove("hidden");
+
+    const label = el("div", "runes-label");
+    label.appendChild(el("span", "slot-label", "Selected Runes"));
+    const styleNames = [runesData.primaryStyle, runesData.subStyle]
+        .filter(Boolean)
+        .map((style) => style.name)
+        .join(" + ");
+    if (styleNames) label.appendChild(el("span", "runes-styles", styleNames));
+    row.appendChild(label);
+
+    const icons = el("div", "runes-icons");
+    const keystone = el("div", "rune keystone");
+    keystone.appendChild(runeIcon(runesData.keystone, 44));
+    keystone.appendChild(el("span", "rune-name", runesData.keystone.name));
+    icons.appendChild(keystone);
+
+    for (const rune of runesData.runes || []) {
+        const wrap = el("div", "rune");
+        wrap.appendChild(runeIcon(rune, 30));
+        icons.appendChild(wrap);
+    }
+    row.appendChild(icons);
+
+    if (runesData.shards && runesData.shards.length) {
+        const shards = el("div", "rune-shards");
+        shards.appendChild(el("span", "or", "Shards"));
+        runesData.shards.forEach((shard) =>
+            shards.appendChild(el("span", "option-chip", shard))
+        );
+        row.appendChild(shards);
+    }
+}
+
+function renderBuildStats(stats, items, version) {
+    const box = document.getElementById("build-stats");
+    box.replaceChildren();
+    if (!stats || !stats.topItems || !stats.topItems.length) {
+        box.classList.add("hidden");
+        return;
+    }
+    box.classList.remove("hidden");
+
+    box.appendChild(
+        el(
+            "span",
+            "slot-label",
+            `From your last ${stats.gamesAnalyzed} game${stats.gamesAnalyzed === 1 ? "" : "s"} ` +
+                `on this champion (${stats.wins}W ${stats.gamesAnalyzed - stats.wins}L) — items you actually finished:`
+        )
+    );
+    const chips = el("div", "stats-chips");
+    for (const entry of stats.topItems) {
+        const chip = el("span", "option-chip stat-chip");
+        const match = entry.name ? findItem(items, entry.name) : null;
+        if (match) chip.appendChild(itemIcon(match.id, version));
+        chip.appendChild(el("span", null, `${entry.name || "Item " + entry.itemId} ×${entry.games}`));
+        chips.appendChild(chip);
+    }
+    box.appendChild(chips);
 }
 
 function renderBuild(advice, items, version) {
@@ -414,7 +499,9 @@ async function renderDashboard(data) {
     renderHero(data);
     renderBadges(data.matchup, data.game);
     renderOverride(data);
+    renderRunes(data.runes);
     renderBuild(advice, items, data.ddragonVersion);
+    renderBuildStats(data.buildStats, items, data.ddragonVersion);
     renderLaneTips(advice);
     renderDirection(advice, extras);
 

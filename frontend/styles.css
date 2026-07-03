@@ -304,6 +304,53 @@ button { font: inherit; cursor: pointer; border-radius: 6px; }
 .override-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .override-controls select { width: auto; padding: 8px 10px; font-size: 0.85rem; }
 
+/* ---------- Runes row ---------- */
+
+.runes-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    background: rgba(7, 17, 31, 0.55);
+    border: 1px solid rgba(48, 68, 94, 0.7);
+    border-radius: 8px;
+}
+
+.runes-label { display: grid; gap: 2px; min-width: 120px; }
+
+.runes-styles { color: var(--muted-text); font-size: 0.78rem; }
+
+.runes-icons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.rune {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rune img {
+    border-radius: 50%;
+    background: var(--background);
+    border: 1px solid var(--border);
+    display: block;
+}
+
+.rune.keystone img {
+    border: 2px solid var(--gold);
+    box-shadow: 0 0 12px rgba(200, 155, 60, 0.35);
+}
+
+.rune.keystone .rune-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--gold-light);
+    margin-right: 6px;
+}
+
+.rune-shards { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+
 /* ---------- Full build grid ---------- */
 
 .build-grid {
@@ -374,6 +421,27 @@ button { font: inherit; cursor: pointer; border-radius: 6px; }
 }
 
 .option-chip img { width: 20px; height: 20px; border-radius: 50%; display: block; }
+
+.slot-note {
+    color: var(--gold);
+    font-size: 0.7rem;
+    line-height: 1.4;
+}
+
+.build-stats {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: rgba(7, 17, 31, 0.55);
+    border: 1px solid rgba(200, 155, 60, 0.35);
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+}
+
+.stats-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.stat-chip { font-size: 0.78rem; padding: 3px 10px 3px 3px; }
+.stat-chip img { width: 24px; height: 24px; }
 
 .build-direction { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
 

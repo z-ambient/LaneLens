@@ -67,16 +67,22 @@ def _team_damage_profile(team):
 
 def _starting_item(my_class, enemy_champ, my_lane):
     if my_lane == "Jungle":
-        return "Jungle companion (Mosstomper for tanks, Gustwalker/Scorchling otherwise)"
+        return "Mosstomper Seedling" if my_class == "Tank" else "Gustwalker Hatchling"
     if my_lane == "Support":
         return "World Atlas"
     if my_class == "Marksman":
         return "Doran's Blade"
     if my_class == "Mage":
         return "Doran's Ring"
-    if enemy_champ and _primary_class(enemy_champ) in ("Marksman", "Mage"):
-        return "Doran's Shield (survive ranged poke)"
     return "Doran's Shield"
+
+
+def _starting_purchase(starting_item):
+    """The entire first-shop purchase, not just the main starter item."""
+    # 400g starters leave room for two potions; 450g starters for one.
+    if starting_item in ("Doran's Ring", "World Atlas"):
+        return [starting_item, "Health Potion", "Health Potion"]
+    return [starting_item, "Health Potion"]
 
 
 def _boots(my_class, enemy_champ, enemy_team):
@@ -207,8 +213,11 @@ def _full_build(my_class, ad, starting_item, boots, healers, resist_priority):
         if alt not in boots
     ][:2]
 
+    starting_slot = _slot("Starting", starting_item, start_options)
+    starting_slot["items"] = _starting_purchase(starting_item)
+
     build = [
-        _slot("Starting", starting_item, start_options),
+        starting_slot,
         _slot("Boots", boots, boots_options),
     ]
     build.extend(

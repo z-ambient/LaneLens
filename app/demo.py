@@ -48,6 +48,34 @@ def get_demo_response(ddragon_version):
                 _member("Leona", "Leona", lane="Support"),
             ],
         },
+        "runes": {
+            "keystone": {
+                "name": "Grasp of the Undying",
+                "icon": "perk-images/Styles/Resolve/GraspOfTheUndying/GraspOfTheUndying.png",
+            },
+            "runes": [
+                {"name": "Demolish", "icon": "perk-images/Styles/Resolve/Demolish/Demolish.png"},
+                {"name": "Second Wind", "icon": "perk-images/Styles/Resolve/SecondWind/SecondWind.png"},
+                {"name": "Overgrowth", "icon": "perk-images/Styles/Resolve/Overgrowth/Overgrowth.png"},
+                {"name": "Biscuit Delivery", "icon": "perk-images/Styles/Inspiration/BiscuitDelivery/BiscuitDelivery.png"},
+                {"name": "Approach Velocity", "icon": "perk-images/Styles/Resolve/ApproachVelocity/ApproachVelocity.png"},
+            ],
+            "shards": ["Health Scaling", "Armor", "Health"],
+            "primaryStyle": {"name": "Resolve", "icon": "perk-images/Styles/7204_Resolve.png"},
+            "subStyle": {"name": "Inspiration", "icon": "perk-images/Styles/7203_Whimsy.png"},
+        },
+        "buildStats": {
+            "gamesAnalyzed": 4,
+            "wins": 3,
+            "topItems": [
+                {"itemId": 3068, "name": "Sunfire Aegis", "games": 4},
+                {"itemId": 3047, "name": "Plated Steelcaps", "games": 4},
+                {"itemId": 3075, "name": "Thornmail", "games": 3},
+                {"itemId": 3083, "name": "Warmog's Armor", "games": 2},
+                {"itemId": 3110, "name": "Frozen Heart", "games": 1},
+            ],
+            "keystoneId": 8437,
+        },
         "teamNotes": [
             "Your team scales well - Jinx and Orianna spike hard at three items.",
             "Enemy team has strong engage - respect Leona and Lee Sin picks.",
@@ -59,7 +87,8 @@ def get_demo_response(ddragon_version):
             "boots": "Plated Steelcaps",
             "firstItem": "Sunfire Aegis",
             "fullBuild": [
-                {"label": "Starting", "item": "Doran's Shield", "options": ["Doran's Ring"]},
+                {"label": "Starting", "item": "Doran's Shield", "options": ["Doran's Ring"],
+                 "items": ["Doran's Shield", "Health Potion"]},
                 {"label": "Boots", "item": "Plated Steelcaps", "options": ["Mercury's Treads"]},
                 {"label": "Core", "item": "Sunfire Aegis", "options": ["Heartsteel", "Iceborn Gauntlet"]},
                 {"label": "Armor", "item": "Thornmail", "options": ["Frozen Heart", "Randuin's Omen"]},
