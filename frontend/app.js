@@ -92,6 +92,7 @@ function startLoading() {
     enhanceToken++; // invalidate any in-flight AI enhancement
     setAiStatus(null);
     errorPanel.classList.add("hidden");
+    document.getElementById("no-game").classList.add("hidden");
     dashboard.classList.add("hidden");
     loadingPanel.classList.remove("hidden");
     loadingMessage.textContent = LOADING_STEPS[0];
@@ -109,8 +110,20 @@ function stopLoading() {
 function showError(message) {
     stopLoading();
     dashboard.classList.add("hidden");
+    document.getElementById("no-game").classList.add("hidden");
     errorMessage.textContent = message;
     errorPanel.classList.remove("hidden");
+}
+
+// Calm state for "not in a game right now" - this isn't an error.
+function showNoGame(body) {
+    stopLoading();
+    dashboard.classList.add("hidden");
+    errorPanel.classList.add("hidden");
+    const who = body && body.gameName ? `${body.gameName} #${body.tagLine}` : "this player";
+    document.getElementById("no-game-text").textContent =
+        `No live game found for ${who}. Start a League match, then try again.`;
+    document.getElementById("no-game").classList.remove("hidden");
 }
 
 // ---------- Data Dragon item index (for item icons) ----------
@@ -187,7 +200,11 @@ async function analyze(body) {
             return;
         }
         if (!data.ok) {
-            showError(friendlyError(response.status, data.error));
+            if (response.status === 404 && /no live/i.test(data.error || "")) {
+                showNoGame(body);
+            } else {
+                showError(friendlyError(response.status, data.error));
+            }
             return;
         }
         // Remember this player so next time is one click.
@@ -462,9 +479,6 @@ async function enhanceAdvice(data) {
 }
 
 function friendlyError(status, message) {
-    if (status === 404 && /no live/i.test(message || "")) {
-        return "No live game found. Start a League match, then try again.";
-    }
     if (status === 429) {
         return "Riot API rate limit hit. Wait a minute, then try again.";
     }
@@ -989,6 +1003,7 @@ form.addEventListener("submit", (event) => {
 
 demoBtn.addEventListener("click", loadDemo);
 errorDemoBtn.addEventListener("click", loadDemo);
+document.getElementById("no-game-demo-btn").addEventListener("click", loadDemo);
 
 document.getElementById("override-btn").addEventListener("click", () => {
     if (!lastRequestBody) return;

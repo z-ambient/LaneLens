@@ -86,6 +86,19 @@
                 <p class="error-hint">Not in a game right now? Try the <button type="button" id="error-demo-btn" class="link-btn">demo match</button>.</p>
             </section>
 
+            <!-- No live game (calm state, not an error) -->
+            <section id="no-game" class="panel no-game-panel hidden" aria-live="polite">
+                <span class="no-game-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </span>
+                <h3 class="no-game-title">No Live Game Found</h3>
+                <p id="no-game-text" class="no-game-text">Start a League match, then try again.</p>
+                <p class="no-game-hint">Want a preview in the meantime? Try the <button type="button" id="no-game-demo-btn" class="link-btn">demo match</button>.</p>
+            </section>
+
             <!-- Dashboard grid -->
             <div id="dashboard" class="dash hidden">
 

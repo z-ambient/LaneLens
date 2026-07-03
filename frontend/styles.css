@@ -303,6 +303,52 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
 .error-panel p { margin: 0 0 6px; }
 .error-hint { color: var(--muted-text); font-size: 0.9rem; }
 
+/* ---------- No live game (calm state) ---------- */
+
+.no-game-panel {
+    text-align: center;
+    padding: 44px 24px;
+    margin-bottom: 16px;
+    border-color: rgba(200, 155, 60, 0.35);
+    background:
+        radial-gradient(circle at top, rgba(200, 155, 60, 0.08), transparent 60%),
+        linear-gradient(150deg, var(--panel-light), var(--panel));
+}
+
+.no-game-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    color: var(--gold);
+    background: rgba(200, 155, 60, 0.1);
+    border: 1px solid rgba(200, 155, 60, 0.4);
+    margin-bottom: 14px;
+}
+
+.no-game-icon svg { width: 26px; height: 26px; }
+
+.no-game-panel .no-game-title {
+    margin: 0 0 8px;
+    font-family: "Cinzel", "Times New Roman", serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gold-light);
+}
+
+.no-game-text {
+    margin: 0 auto 6px;
+    max-width: 480px;
+    color: var(--text);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.no-game-hint { margin: 0; color: var(--muted-text); font-size: 0.85rem; }
+
 /* ---------- Dashboard grid ---------- */
 
 .dash {
