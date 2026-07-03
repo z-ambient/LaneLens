@@ -321,6 +321,26 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
 .teams      { grid-column: span 4; }
 .extras     { grid-column: span 5; }
 
+/* Bottom-row panels have a FIXED height; long content scrolls inside them
+   instead of stretching the row and leaving blank space in shorter panels. */
+.runes-card, .teams, .extras { height: 560px; }
+
+.panel-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.panel-scroll::-webkit-scrollbar, .runes-body::-webkit-scrollbar { width: 5px; }
+.panel-scroll::-webkit-scrollbar-thumb, .runes-body::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 999px;
+}
+.panel-scroll::-webkit-scrollbar-track, .runes-body::-webkit-scrollbar-track { background: transparent; }
+
+.teams { display: flex; flex-direction: column; }
+
 @media (max-width: 1080px) {
     .runes-card, .teams { grid-column: span 6; }
     .main-card, .featured, .build, .extras { grid-column: span 12; }
@@ -497,6 +517,58 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
 }
 
 .featured h3 { color: var(--gold); }
+.featured h3, .extras h3 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* Sharp blue ring on panels while the AI is refining their content:
+   a crisp 1px outline plus a tight halo, pulsing in intensity. */
+@keyframes aiGlow {
+    0%, 100% {
+        box-shadow:
+            0 0 0 1px rgba(85, 199, 255, 0.4),
+            0 0 6px rgba(85, 199, 255, 0.22),
+            0 10px 26px rgba(0, 0, 0, 0.28);
+    }
+    50% {
+        box-shadow:
+            0 0 0 1px rgba(85, 199, 255, 0.85),
+            0 0 12px rgba(85, 199, 255, 0.45),
+            0 10px 26px rgba(0, 0, 0, 0.28);
+    }
+}
+
+.ai-glow {
+    border-color: rgba(85, 199, 255, 0.7);
+    animation: aiGlow 1.6s ease-in-out infinite;
+}
+
+/* Background AI enhancement status */
+.ai-status {
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted-text);
+    text-transform: none;
+}
+
+.ai-status.thinking {
+    color: var(--blue-team);
+    border-color: rgba(85, 199, 255, 0.4);
+    animation: aiPulse 1.4s ease-in-out infinite;
+}
+
+.ai-status.done {
+    color: var(--easy);
+    border-color: rgba(76, 208, 141, 0.4);
+}
+
+@keyframes aiPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
 
 /* Rows share the card's full height so the column has no dead space. */
 .featured-rows {
@@ -550,10 +622,13 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
 
 .runes-body {
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    gap: 18px;
+    justify-content: flex-start;
+    gap: 22px;
+    padding-right: 6px;
 }
 
 /* Oversized keystone icon as a faint background, like the client's rune page art. */
@@ -663,6 +738,14 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
 .option-chip img { width: 20px; height: 20px; border-radius: 50%; display: block; }
 
 .runes-empty { color: var(--muted-text); font-size: 0.85rem; }
+
+.runes-note {
+    margin: 0;
+    color: var(--muted-text);
+    font-size: 0.72rem;
+    font-style: italic;
+    line-height: 1.5;
+}
 
 /* ---------- Stat tiles ---------- */
 

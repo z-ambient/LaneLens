@@ -9,14 +9,14 @@ leaves this backend.
 """
 
 import os
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app import champions, runes
+from app import advice_cache, champions, runes
 from app.advice_engine import build_advice, build_team_notes
 from app.ai_agent import refine_advice_with_ai
 from app.config import DEFAULT_PLATFORM, REGION_BY_PLATFORM, riot_key_present
@@ -177,27 +177,13 @@ def analyze_matchup(body: AnalyzeRequest):
     )
 
     # Step 7: the player's selected runes for THIS game (Spectator perks).
+    # AI refinement is NOT done here - the frontend requests it separately
+    # via /api/enhance-advice so results appear instantly (progressive load).
     selected_runes = runes.extract_runes(me.get("perks"))
-
-    ai_advice = refine_advice_with_ai(
-        {
-            "myChampion": my_champ["name"],
-            "enemyChampion": enemy_champ["name"] if enemy_champ else None,
-            "lane": my_lane,
-            "myTeam": [champ["name"] for champ in my_team_champs],
-            "enemyTeam": [champ["name"] for champ in enemy_team_champs],
-            "queue": QUEUE_NAMES.get(game.get("gameQueueConfigId"), "Unknown queue"),
-            "selectedRunes": selected_runes,
-        },
-        advice,
-    )
-    if ai_advice is not None:
-        advice = ai_advice
 
     return {
         "ok": True,
         "source": "riot-api",
-        "aiEnhanced": ai_advice is not None,
         "ddragonVersion": champions.get_ddragon_version(),
         "game": {
             "queue": QUEUE_NAMES.get(game.get("gameQueueConfigId"), game.get("gameMode", "Unknown")),
@@ -230,6 +216,59 @@ def analyze_matchup(body: AnalyzeRequest):
         "runes": selected_runes,
         "advice": advice,
     }
+
+
+class EnhanceRequest(BaseModel):
+    myChampion: str
+    enemyChampion: Optional[str] = None
+    lane: Optional[str] = None
+    myTeam: List[str] = []
+    enemyTeam: List[str] = []
+    queue: Optional[str] = None
+    selectedRunes: Optional[dict] = None
+    advice: dict
+
+
+@app.post("/api/enhance-advice")
+def enhance_advice(body: EnhanceRequest):
+    """Second phase of a progressive analysis: AI-refine the advice.
+
+    Called by the frontend AFTER the instant deterministic result is already
+    on screen. Cached matchup advice (same champions + lane on the current
+    patch) is returned immediately with no AI call; otherwise the AI runs
+    once and its matchup-core output is cached for next time.
+    """
+    if not body.enemyChampion:
+        return {"ok": True, "aiEnhanced": False, "cached": False, "advice": body.advice}
+
+    patch = champions.get_ddragon_version()
+
+    cached = advice_cache.get_cached(body.myChampion, body.enemyChampion, body.lane, patch)
+    if cached:
+        return {
+            "ok": True,
+            "aiEnhanced": True,
+            "cached": True,
+            "advice": advice_cache.merge_cached(body.advice, cached),
+        }
+
+    ai_advice = refine_advice_with_ai(
+        {
+            "myChampion": body.myChampion,
+            "enemyChampion": body.enemyChampion,
+            "lane": body.lane,
+            "myTeam": body.myTeam,
+            "enemyTeam": body.enemyTeam,
+            "queue": body.queue,
+            "selectedRunes": body.selectedRunes,
+        },
+        body.advice,
+    )
+    if ai_advice is None:
+        return {"ok": True, "aiEnhanced": False, "cached": False, "advice": body.advice}
+
+    advice_cache.store(body.myChampion, body.enemyChampion, body.lane, patch, ai_advice)
+    return {"ok": True, "aiEnhanced": True, "cached": False, "advice": ai_advice}
 
 
 # Serve the frontend last so /api/* routes take priority.

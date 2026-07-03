@@ -86,6 +86,8 @@ function setBusy(busy) {
 
 function startLoading() {
     let step = 0;
+    enhanceToken++; // invalidate any in-flight AI enhancement
+    setAiStatus(null);
     errorPanel.classList.add("hidden");
     dashboard.classList.add("hidden");
     loadingPanel.classList.remove("hidden");
@@ -193,7 +195,12 @@ async function analyze(body) {
                 platform: body.platform,
             });
         }
+        // Progressive load: show the instant deterministic result now, then
+        // let the AI refine it in the background.
         await renderDashboard(data);
+        if (data.source === "riot-api" && data.matchup.enemyChampion) {
+            enhanceAdvice(data);
+        }
     } catch (err) {
         showError("Could not reach the LaneLens backend. Make sure the server is running, then try again.");
     } finally {
@@ -214,6 +221,73 @@ async function loadDemo() {
     } finally {
         stopLoading();
         setBusy(false);
+    }
+}
+
+// ---------- Background AI enhancement (progressive loading) ----------
+
+let enhanceToken = 0;
+
+// Panels whose content the AI refines - they glow while it works.
+const AI_GLOW_SELECTOR = ".main-card, .featured, .build, .extras, #stat-tiles .tile";
+
+function setAiStatus(state) {
+    document.querySelectorAll(".ai-status").forEach((badge) => {
+        badge.classList.remove("hidden", "thinking", "done");
+        if (state === "thinking") {
+            badge.classList.add("thinking");
+            badge.textContent = "✦ AI refining advice…";
+        } else if (state === "done") {
+            badge.classList.add("done");
+            badge.textContent = "✦ AI enhanced";
+        } else {
+            badge.classList.add("hidden");
+            badge.textContent = "";
+        }
+    });
+    document.querySelectorAll(AI_GLOW_SELECTOR).forEach((panel) => {
+        panel.classList.toggle("ai-glow", state === "thinking");
+    });
+}
+
+async function enhanceAdvice(data) {
+    const token = ++enhanceToken;
+    const playerOnBlue = data.teams.blue.some((m) => m.isPlayer);
+    const myTeam = playerOnBlue ? data.teams.blue : data.teams.red;
+    const enemyTeam = playerOnBlue ? data.teams.red : data.teams.blue;
+
+    setAiStatus("thinking");
+    try {
+        const response = await fetch("/api/enhance-advice", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                myChampion: data.player.champion,
+                enemyChampion: data.matchup.enemyChampion,
+                lane: data.matchup.lane,
+                myTeam: myTeam.map((m) => m.championName),
+                enemyTeam: enemyTeam.map((m) => m.championName),
+                queue: data.game && data.game.queue,
+                selectedRunes: data.runes,
+                advice: data.advice,
+            }),
+        });
+        const result = await response.json();
+
+        // A newer analysis started while this one was in flight - discard.
+        if (token !== enhanceToken) return;
+
+        if (result.ok && result.aiEnhanced) {
+            data.advice = result.advice;
+            const items = await loadItemIndex(data.ddragonVersion);
+            renderAdviceSections(result.advice, items, data.ddragonVersion);
+            setSourceNote(data, result.cached ? "cached" : "enhanced");
+            setAiStatus("done");
+        } else {
+            setAiStatus(null);
+        }
+    } catch (err) {
+        if (token === enhanceToken) setAiStatus(null);
     }
 }
 
@@ -451,9 +525,12 @@ function renderRunes(runesData) {
     body.appendChild(bg);
 
     // Spectator perk order: keystone, 3 primary minors, 2 secondary minors.
+    // Riot's live API sometimes shares only part of the page ("partial") -
+    // then the primary/secondary split isn't reliable, so everything known
+    // goes under the primary tree.
     const minors = runesData.runes || [];
-    const primaryMinors = minors.slice(0, 3);
-    const secondaryMinors = minors.slice(3);
+    const primaryMinors = runesData.partial ? minors : minors.slice(0, 3);
+    const secondaryMinors = runesData.partial ? [] : minors.slice(3);
 
     const primary = el("div", "rune-tree");
     primary.appendChild(runeTreeHeader(runesData.primaryStyle, "Primary"));
@@ -461,7 +538,7 @@ function renderRunes(runesData) {
     primaryMinors.forEach((rune) => primary.appendChild(runeRow(rune, false)));
     body.appendChild(primary);
 
-    if (secondaryMinors.length) {
+    if (secondaryMinors.length || (runesData.partial && runesData.subStyle)) {
         const secondary = el("div", "rune-tree secondary");
         secondary.appendChild(runeTreeHeader(runesData.subStyle, "Secondary"));
         secondaryMinors.forEach((rune) => secondary.appendChild(runeRow(rune, false)));
@@ -484,6 +561,16 @@ function renderRunes(runesData) {
             shards.appendChild(row);
         });
         body.appendChild(shards);
+    }
+
+    if (runesData.partial) {
+        body.appendChild(
+            el(
+                "p",
+                "runes-note",
+                "Riot's live-game API shared only part of the rune page for this game."
+            )
+        );
     }
 }
 
@@ -626,28 +713,13 @@ function extraCard(title, content, iconName, colorClass) {
     return card;
 }
 
-async function renderDashboard(data) {
-    errorPanel.classList.add("hidden");
-
-    const items = await loadItemIndex(data.ddragonVersion);
-    const advice = data.advice;
+// Advice-driven sections, callable again when AI enhancement arrives.
+function renderAdviceSections(advice, items, version) {
     const extras = advice.extras || {};
-
-    renderOverview(data);
-    renderBadges(data.matchup, data.game);
-    renderOverride(data);
     renderFeatured(advice, extras);
     renderTiles(extras);
-    renderRunes(data.runes);
-    renderBuild(advice, items, data.ddragonVersion);
+    renderBuild(advice, items, version);
     renderLaneTips(advice);
-
-    renderTeam("blue-team", data.teams.blue, data.ddragonVersion);
-    renderTeam("red-team", data.teams.red, data.ddragonVersion);
-
-    const notes = document.getElementById("team-notes");
-    notes.replaceChildren();
-    (data.teamNotes || []).forEach((note) => notes.appendChild(el("li", null, note)));
 
     // Extra info: tiles cover resist/anti-heal/focus/threats, so this grid
     // holds the remaining cards plus the quick tips.
@@ -672,19 +744,43 @@ async function renderDashboard(data) {
         tipsCard.classList.add("span-all");
         extraCards.appendChild(tipsCard);
     }
+}
 
+function setSourceNote(data, aiState) {
     const sourceNote = document.getElementById("source-note");
+    const parts = [];
     if (data.source === "demo") {
-        sourceNote.textContent = "Demo match — sample data, no Riot API call was made.";
-    } else if (data.matchup.confidence === "inferred") {
-        sourceNote.textContent =
-            (data.aiEnhanced ? "AI-enhanced advice. " : "") +
-            "Lane opponent was inferred from champion roles and summoner spells — correct it in the overview if wrong.";
+        parts.push("Demo match — sample data, no Riot API call was made.");
     } else {
-        sourceNote.textContent = data.aiEnhanced
-            ? "AI-enhanced advice from live game data."
-            : "Advice generated from live game data.";
+        if (aiState === "enhanced") parts.push("AI-enhanced advice.");
+        if (aiState === "cached") parts.push("AI-enhanced advice (from your matchup cache).");
+        if (data.matchup.confidence === "inferred") {
+            parts.push("Lane opponent was inferred from champion roles and summoner spells — correct it in the overview if wrong.");
+        }
+        if (!parts.length) parts.push("Advice generated from live game data.");
     }
+    sourceNote.textContent = parts.join(" ");
+}
+
+async function renderDashboard(data) {
+    errorPanel.classList.add("hidden");
+
+    const items = await loadItemIndex(data.ddragonVersion);
+
+    renderOverview(data);
+    renderBadges(data.matchup, data.game);
+    renderOverride(data);
+    renderRunes(data.runes);
+    renderAdviceSections(data.advice, items, data.ddragonVersion);
+
+    renderTeam("blue-team", data.teams.blue, data.ddragonVersion);
+    renderTeam("red-team", data.teams.red, data.ddragonVersion);
+
+    const notes = document.getElementById("team-notes");
+    notes.replaceChildren();
+    (data.teamNotes || []).forEach((note) => notes.appendChild(el("li", null, note)));
+
+    setSourceNote(data, null);
 
     dashboard.classList.remove("hidden");
 

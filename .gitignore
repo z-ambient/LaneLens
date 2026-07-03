@@ -23,3 +23,6 @@ node_modules/
 Thumbs.db
 .idea/
 .vscode/
+
+# Generated matchup-advice cache
+data/advice_cache.json

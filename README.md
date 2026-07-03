@@ -28,6 +28,19 @@ evolved from the original [LaneLens-Manual](https://github.com/z-ambient/LaneLen
    failure silently falls back to the deterministic advice.
 6. **Selected runes** — the player's rune page comes straight from the live
    game (Spectator perks), mapped to names and icons via Data Dragon.
+7. **Progressive AI loading with a persistent matchup cache** — the analysis
+   returns instantly with deterministic advice (~1s: just the two Riot
+   calls), then the frontend requests AI refinement in the background
+   (`POST /api/enhance-advice`) and the dashboard updates in place with an
+   "AI enhanced" badge. The AI's matchup-specific output is cached on disk
+   (`data/advice_cache.json`, keyed by champion + enemy + lane) and reused
+   until the game patch changes — Data Dragon's version acts as the
+   freshness check. The first time a matchup is analyzed the AI takes
+   ~30-60s in the background; **every later game with the same matchup gets
+   AI-quality advice in milliseconds**, so LaneLens gets faster the more
+   you use it. Team-dependent fields (win condition, biggest threats, who
+   to play around) are never cached — they are regenerated from the actual
+   teams in every game.
 
 ## Setup
 
@@ -88,6 +101,7 @@ e.g. `404` with `"No live League of Legends game found for this player."`
 
 | Route | Description |
 |---|---|
+| `POST /api/enhance-advice` | Background AI refinement of a matchup (cache-first; see step 7 above) |
 | `GET /api/demo-matchup` | Demo Malphite-vs-Sett dashboard data (no Riot call) |
 | `GET /api/health` | Backend health + whether the Riot key is configured |
 | `GET /` | The dashboard frontend |
