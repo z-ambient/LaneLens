@@ -26,18 +26,12 @@ evolved from the original [LaneLens-Manual](https://github.com/z-ambient/LaneLen
    matchup data (`data/matchups.json`), champion classes, and team damage
    profiles. If `OPENAI_API_KEY` is set, the advice is refined by AI; any AI
    failure silently falls back to the deterministic advice.
-6. **Real match data** — the player's selected runes come straight from the
-   live game (Spectator perks), and Match-v5 pulls their recent finished games
-   on the same champion to show items they actually built (and to promote
-   frequently-built alternatives in the recommended build). Third-party stat
-   sites (op.gg / u.gg) block API access, so Riot's own match history is the
-   data source. Capped at ~9 extra Riot calls per analysis and cached for
-   10 minutes per player+champion to respect dev-key rate limits; any failure
-   here degrades gracefully (the section is simply hidden).
+6. **Selected runes** — the player's rune page comes straight from the live
+   game (Spectator perks), mapped to names and icons via Data Dragon.
 
 ## Setup
 
-Requires Python 3.9+.
+Requires Python 3.10+ (developed on 3.13).
 
 ```bash
 python3 -m venv .venv

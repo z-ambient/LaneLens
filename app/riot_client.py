@@ -78,21 +78,6 @@ class RiotClient:
         )
         return self._get(url)
 
-    def get_match_ids(self, puuid, region, count=20):
-        """Match-v5: recent match IDs for a player (REGIONAL routing)."""
-        url = (
-            "https://{region}.api.riotgames.com"
-            "/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count={count}"
-        ).format(region=region, puuid=quote(puuid, safe=""), count=count)
-        return self._get(url) or []
-
-    def get_match(self, match_id, region):
-        """Match-v5: full detail for one finished match (REGIONAL routing)."""
-        url = (
-            "https://{region}.api.riotgames.com/lol/match/v5/matches/{match_id}"
-        ).format(region=region, match_id=quote(match_id, safe=""))
-        return self._get(url)
-
     def get_active_game(self, puuid, platform):
         """Spectator-v5: fetch the player's current live game, if any.
 

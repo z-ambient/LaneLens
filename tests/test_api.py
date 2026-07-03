@@ -4,18 +4,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.main as main_module
-import app.match_stats as match_stats
 from app.main import app
 from app.riot_client import RiotApiError
 
 client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def clear_stats_cache():
-    match_stats._cache.clear()
-    yield
-    match_stats._cache.clear()
 
 # Champion IDs: Malphite 54, Sett 875, LeeSin 64, Ahri 103, Kaisa 145,
 # Leona 89, Vi 254, Orianna 61, Jinx 222, Thresh 412.
@@ -55,12 +47,6 @@ class FakeRiotClient:
 
     def get_active_game(self, puuid, platform):
         return self.game
-
-    def get_match_ids(self, puuid, region, count=20):
-        return []
-
-    def get_match(self, match_id, region):
-        return None
 
 
 @pytest.fixture
@@ -167,8 +153,6 @@ def test_live_game_full_flow(riot):
     full_build = data["advice"]["fullBuild"]
     assert full_build[0]["label"] == "Starting"
     assert "Health Potion" in full_build[0]["items"]
-    # No match history in the fake client -> no build stats, no crash.
-    assert data["buildStats"] is None
 
 
 def test_manual_override(riot):

@@ -7,22 +7,29 @@ page for the live game. Loaded lazily; failures degrade to None so an
 analysis never fails because of runes.
 """
 
+import re
+
 import requests
 
 _cache = {"styles": None, "runes": None}
 
 # Stat shards are not part of runesReforged.json.
 STAT_SHARDS = {
-    5001: "Health Scaling",
-    5002: "Armor",
-    5003: "Magic Resist",
-    5005: "Attack Speed",
-    5007: "Ability Haste",
-    5008: "Adaptive Force",
-    5010: "Move Speed",
-    5011: "Health",
-    5013: "Tenacity and Slow Resist",
+    5001: {"name": "Health Scaling", "desc": "+10-180 Health (based on level)"},
+    5002: {"name": "Armor", "desc": "+6 Armor"},
+    5003: {"name": "Magic Resist", "desc": "+8 Magic Resist"},
+    5005: {"name": "Attack Speed", "desc": "+10% Attack Speed"},
+    5007: {"name": "Ability Haste", "desc": "+8 Ability Haste"},
+    5008: {"name": "Adaptive Force", "desc": "+9 Adaptive Force"},
+    5010: {"name": "Move Speed", "desc": "+2% Move Speed"},
+    5011: {"name": "Health", "desc": "+65 Health"},
+    5013: {"name": "Tenacity and Slow Resist", "desc": "+10% Tenacity and Slow Resist"},
 }
+
+
+def _strip_tags(text):
+    """shortDesc contains client markup like <lol-uikit-...> - strip it."""
+    return re.sub(r"<[^>]+>", "", text or "").strip()
 
 
 def _ensure_loaded():
@@ -46,7 +53,11 @@ def _ensure_loaded():
         styles[style["id"]] = {"name": style["name"], "icon": style["icon"]}
         for slot in style["slots"]:
             for rune in slot["runes"]:
-                runes[rune["id"]] = {"name": rune["name"], "icon": rune["icon"]}
+                runes[rune["id"]] = {
+                    "name": rune["name"],
+                    "icon": rune["icon"],
+                    "desc": _strip_tags(rune.get("shortDesc")),
+                }
     _cache["styles"] = styles
     _cache["runes"] = runes
     return True
@@ -72,7 +83,7 @@ def extract_runes(perks):
     runes, shards = [], []
     for perk_id in perks["perkIds"]:
         if perk_id in STAT_SHARDS:
-            shards.append(STAT_SHARDS[perk_id])
+            shards.append(dict(STAT_SHARDS[perk_id]))
             continue
         info = _cache["runes"].get(perk_id)
         if info:
