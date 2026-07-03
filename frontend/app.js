@@ -1,6 +1,6 @@
 // LaneLens frontend. Talks only to the LaneLens backend (/api/*) —
-// the Riot API key never reaches the browser. Champion and item images
-// come from the public Data Dragon CDN (no key required).
+// the Riot API key never reaches the browser. Champion, item, and rune
+// images come from the public Data Dragon CDN (no key required).
 
 const form = document.getElementById("analyze-form");
 const analyzeBtn = document.getElementById("analyze-btn");
@@ -192,48 +192,45 @@ function itemIcon(itemId, version) {
     return img;
 }
 
-// Loading-screen art for the hero section (versionless CDN path).
-function heroArt(imgEl, nameEl, imageKey, name) {
-    nameEl.textContent = name || "Unknown";
-    if (imageKey) {
-        imgEl.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${imageKey}_0.jpg`;
-        imgEl.style.visibility = "visible";
-    } else {
-        imgEl.removeAttribute("src");
-        imgEl.style.visibility = "hidden";
-    }
+function runeIcon(rune, size) {
+    const img = document.createElement("img");
+    img.width = size;
+    img.height = size;
+    img.alt = rune.name;
+    img.title = rune.name;
+    img.src = `https://ddragon.leagueoflegends.com/cdn/img/${rune.icon}`;
+    return img;
 }
 
 // ---------- Section renderers ----------
 
-function renderHero(data) {
+function renderOverview(data) {
     const allMembers = [...data.teams.blue, ...data.teams.red];
     const me = allMembers.find((m) => m.isPlayer);
     const enemy = allMembers.find((m) => m.isOpponent);
 
-    heroArt(
-        document.getElementById("hero-me"),
-        document.getElementById("hero-me-name"),
-        me && me.imageKey,
-        data.player.champion
-    );
-    heroArt(
-        document.getElementById("hero-enemy"),
-        document.getElementById("hero-enemy-name"),
-        enemy && enemy.imageKey,
-        data.matchup.enemyChampion || "Select opponent"
-    );
+    const meImg = document.getElementById("ov-me");
+    const enemyImg = document.getElementById("ov-enemy");
+    meImg.replaceWith(Object.assign(champIcon(me && me.imageKey, data.ddragonVersion, 64), { id: "ov-me" }));
+    enemyImg.replaceWith(Object.assign(champIcon(enemy && enemy.imageKey, data.ddragonVersion, 64), { id: "ov-enemy" }));
+
+    document.getElementById("ov-me-name").textContent = data.player.champion;
+    document.getElementById("ov-enemy-name").textContent =
+        data.matchup.enemyChampion || "Unknown";
+
+    const ring = document.getElementById("diff-ring");
+    ring.className = "diff-ring";
+    const difficulty = data.matchup.difficulty || "—";
+    if (difficulty !== "—") {
+        ring.classList.add("difficulty-" + difficulty.toLowerCase());
+    }
+    document.getElementById("diff-text").textContent = difficulty;
 }
 
 function renderBadges(matchup, game) {
     const badges = document.getElementById("matchup-badges");
     badges.replaceChildren();
     if (matchup.lane) badges.appendChild(el("span", "badge lane", matchup.lane + " lane"));
-    if (matchup.difficulty) {
-        badges.appendChild(
-            el("span", "badge difficulty-" + matchup.difficulty.toLowerCase(), matchup.difficulty)
-        );
-    }
     badges.appendChild(el("span", "badge confidence", "Matchup: " + matchup.confidence));
     if (game && game.queue) badges.appendChild(el("span", "badge", game.queue));
 }
@@ -265,6 +262,86 @@ function renderOverride(data) {
     document.getElementById("override-lane").value = data.matchup.lane || "";
 }
 
+function featuredRow(glyph, label, text, headline) {
+    const row = el("div", "featured-row" + (headline ? " headline" : ""));
+    row.appendChild(el("span", "glyph", glyph));
+    const wrap = el("div", "fr-text");
+    wrap.append(el("span", "fr-label", label), el("p", null, text));
+    row.appendChild(wrap);
+    return row;
+}
+
+function renderFeatured(advice, extras) {
+    const rows = document.getElementById("featured-rows");
+    rows.replaceChildren();
+    const entries = [
+        ["★", "Win condition", extras.winCondition, true],
+        ["▶", "Game direction", advice.gameDirection, false],
+        ["⚑", "Teamfight plan", advice.teamfightPlan, false],
+        ["♦", "Play around", extras.playAround, false],
+    ];
+    for (const [glyph, label, text, headline] of entries) {
+        if (text) rows.appendChild(featuredRow(glyph, label, text, headline));
+    }
+}
+
+function renderTiles(extras) {
+    const tiles = document.getElementById("stat-tiles");
+    tiles.replaceChildren();
+    const entries = [
+        ["🛡", "g-gold", "Armor or MR priority", extras.resistPriority],
+        ["✚", "g-green", "Anti-heal needed?", extras.antiHeal],
+        ["◎", "g-red", "Who to focus", extras.focusTarget],
+        ["⚠", "g-blue", "Biggest threats", extras.biggestThreats],
+    ];
+    for (const [glyph, color, label, value] of entries) {
+        if (!value) continue;
+        const tile = el("div", "tile");
+        tile.appendChild(el("span", "tile-glyph " + color, glyph));
+        const meta = el("div", "tile-meta");
+        meta.append(el("span", "tile-label", label), el("p", null, value));
+        tile.appendChild(meta);
+        tiles.appendChild(tile);
+    }
+}
+
+function renderRunes(runesData) {
+    const body = document.getElementById("runes-row");
+    body.replaceChildren();
+    if (!runesData || !runesData.keystone) {
+        body.appendChild(
+            el("p", "runes-empty", "Rune data is not available for this game.")
+        );
+        return;
+    }
+
+    const keystone = el("div", "rune-keystone");
+    keystone.appendChild(runeIcon(runesData.keystone, 52));
+    const meta = el("div", "rk-meta");
+    meta.appendChild(el("span", "rk-name", runesData.keystone.name));
+    const styleNames = [runesData.primaryStyle, runesData.subStyle]
+        .filter(Boolean)
+        .map((style) => style.name)
+        .join(" + ");
+    if (styleNames) meta.appendChild(el("span", "rk-styles", styleNames));
+    keystone.appendChild(meta);
+    body.appendChild(keystone);
+
+    if (runesData.runes && runesData.runes.length) {
+        const minors = el("div", "rune-minors");
+        runesData.runes.forEach((rune) => minors.appendChild(runeIcon(rune, 30)));
+        body.appendChild(minors);
+    }
+
+    if (runesData.shards && runesData.shards.length) {
+        const shards = el("div", "rune-shards");
+        runesData.shards.forEach((shard) =>
+            shards.appendChild(el("span", "shard-chip", shard))
+        );
+        body.appendChild(shards);
+    }
+}
+
 function slotIcon(item, version) {
     const icon = el("div", "slot-icon");
     if (item) {
@@ -276,88 +353,60 @@ function slotIcon(item, version) {
     return icon;
 }
 
-function buildSlotCard(slot, items, version) {
-    const card = el("div", "build-slot");
-    card.appendChild(el("span", "slot-label", slot.label));
+function buildRow(slot, items, version) {
+    const row = el("div", "build-row");
 
     // A slot may hold one item or a whole purchase (e.g. starter + potions).
     const purchase = Array.isArray(slot.items) && slot.items.length ? slot.items : [slot.item];
-    const main = el("div", "slot-main");
+    const icons = el("div", "row-icons");
     for (const name of purchase) {
-        main.appendChild(slotIcon(findItem(items, name), version));
+        icons.appendChild(slotIcon(findItem(items, name), version));
     }
-    main.appendChild(el("span", "slot-name", purchase.filter(Boolean).join(" + ") || "—"));
-    card.appendChild(main);
+    row.appendChild(icons);
 
-    if (slot.note) {
-        card.appendChild(el("span", "slot-note", "★ " + slot.note));
-    }
+    const meta = el("div", "row-meta");
+    meta.append(
+        el("span", "slot-label", slot.label),
+        el("span", "slot-name", purchase.filter(Boolean).join(" + ") || "—")
+    );
+    if (slot.note) meta.appendChild(el("span", "slot-note", "★ " + slot.note));
+    row.appendChild(meta);
 
     const options = (slot.options || []).filter(Boolean);
     if (options.length) {
-        const row = el("div", "slot-options");
-        row.appendChild(el("span", "or", "or"));
+        const optionRow = el("div", "row-options");
+        optionRow.appendChild(el("span", "or", "or"));
         for (const name of options) {
             const chip = el("span", "option-chip");
             const match = findItem(items, name);
             if (match) chip.appendChild(itemIcon(match.id, version));
             chip.appendChild(el("span", null, name));
-            row.appendChild(chip);
+            optionRow.appendChild(chip);
         }
-        card.appendChild(row);
+        row.appendChild(optionRow);
     }
-    return card;
+    return row;
 }
 
-function runeIcon(rune, size, title) {
-    const img = document.createElement("img");
-    img.width = size;
-    img.height = size;
-    img.alt = title || rune.name;
-    img.title = title || rune.name;
-    img.src = `https://ddragon.leagueoflegends.com/cdn/img/${rune.icon}`;
-    return img;
-}
+function renderBuild(advice, items, version) {
+    const list = document.getElementById("build-list");
+    list.replaceChildren();
 
-function renderRunes(runesData) {
-    const row = document.getElementById("runes-row");
-    row.replaceChildren();
-    if (!runesData || !runesData.keystone) {
-        row.classList.add("hidden");
-        return;
+    const slots = Array.isArray(advice.fullBuild) && advice.fullBuild.length
+        ? advice.fullBuild
+        : [
+              { label: "Starting", item: advice.startingItem, options: [] },
+              { label: "Boots", item: advice.boots, options: [] },
+              { label: "First Item", item: advice.firstItem, options: [] },
+          ];
+    for (const slot of slots) {
+        list.appendChild(buildRow(slot, items, version));
     }
-    row.classList.remove("hidden");
 
-    const label = el("div", "runes-label");
-    label.appendChild(el("span", "slot-label", "Selected Runes"));
-    const styleNames = [runesData.primaryStyle, runesData.subStyle]
-        .filter(Boolean)
-        .map((style) => style.name)
-        .join(" + ");
-    if (styleNames) label.appendChild(el("span", "runes-styles", styleNames));
-    row.appendChild(label);
-
-    const icons = el("div", "runes-icons");
-    const keystone = el("div", "rune keystone");
-    keystone.appendChild(runeIcon(runesData.keystone, 44));
-    keystone.appendChild(el("span", "rune-name", runesData.keystone.name));
-    icons.appendChild(keystone);
-
-    for (const rune of runesData.runes || []) {
-        const wrap = el("div", "rune");
-        wrap.appendChild(runeIcon(rune, 30));
-        icons.appendChild(wrap);
-    }
-    row.appendChild(icons);
-
-    if (runesData.shards && runesData.shards.length) {
-        const shards = el("div", "rune-shards");
-        shards.appendChild(el("span", "or", "Shards"));
-        runesData.shards.forEach((shard) =>
-            shards.appendChild(el("span", "option-chip", shard))
-        );
-        row.appendChild(shards);
-    }
+    const direction = document.getElementById("build-direction");
+    direction.replaceChildren();
+    direction.appendChild(el("span", "slot-label", "Why this build"));
+    direction.appendChild(el("p", null, advice.buildDirection || "—"));
 }
 
 function renderBuildStats(stats, items, version) {
@@ -372,7 +421,7 @@ function renderBuildStats(stats, items, version) {
     box.appendChild(
         el(
             "span",
-            "slot-label",
+            "stats-label",
             `From your last ${stats.gamesAnalyzed} game${stats.gamesAnalyzed === 1 ? "" : "s"} ` +
                 `on this champion (${stats.wins}W ${stats.gamesAnalyzed - stats.wins}L) — items you actually finished:`
         )
@@ -388,29 +437,6 @@ function renderBuildStats(stats, items, version) {
     box.appendChild(chips);
 }
 
-function renderBuild(advice, items, version) {
-    const grid = document.getElementById("build-grid");
-    grid.replaceChildren();
-
-    // Full build with alternatives; fall back to the three basic slots if an
-    // (older/AI) response is missing fullBuild.
-    const slots = Array.isArray(advice.fullBuild) && advice.fullBuild.length
-        ? advice.fullBuild
-        : [
-              { label: "Starting", item: advice.startingItem, options: [] },
-              { label: "Boots", item: advice.boots, options: [] },
-              { label: "First Item", item: advice.firstItem, options: [] },
-          ];
-    for (const slot of slots) {
-        grid.appendChild(buildSlotCard(slot, items, version));
-    }
-
-    const direction = document.getElementById("build-direction");
-    direction.replaceChildren();
-    direction.appendChild(el("span", "slot-label", "Why this build"));
-    direction.appendChild(el("p", null, advice.buildDirection || "—"));
-}
-
 const TIP_GLYPHS = {
     "Early lane plan": "▶",
     "Trading pattern": "↔",
@@ -420,8 +446,8 @@ const TIP_GLYPHS = {
 };
 
 function renderLaneTips(advice) {
-    const grid = document.getElementById("lane-tips");
-    grid.replaceChildren();
+    const stack = document.getElementById("lane-tips");
+    stack.replaceChildren();
     const steps = [
         ["Early lane plan", advice.lanePlan, true],
         ["Trading pattern", advice.tradingPattern, false],
@@ -429,31 +455,13 @@ function renderLaneTips(advice) {
         ["How to win lane", advice.howToWinLane, false],
         ["Common mistakes", advice.commonMistakes, false],
     ];
-    for (const [label, text, featured] of steps) {
+    for (const [label, text, headline] of steps) {
         if (!text) continue;
-        const card = el("div", "tip-card" + (featured ? " span-2" : ""));
+        const card = el("div", "tip-card" + (headline ? " headline" : ""));
         const head = el("div", "tip-head");
         head.append(el("span", "tip-glyph", TIP_GLYPHS[label] || "▸"), el("h4", null, label));
         card.append(head, el("p", null, text));
-        grid.appendChild(card);
-    }
-}
-
-function renderDirection(advice, extras) {
-    const list = document.getElementById("direction-list");
-    list.replaceChildren();
-    const entries = [
-        ["Game direction", advice.gameDirection],
-        ["Teamfight plan", advice.teamfightPlan],
-        ["Win condition", extras.winCondition],
-        ["Biggest threats", extras.biggestThreats],
-        ["Play around", extras.playAround],
-    ];
-    for (const [label, text] of entries) {
-        if (!text) continue;
-        const item = el("div", "def-item");
-        item.append(el("span", "def-label", label), el("p", null, text));
-        list.appendChild(item);
+        stack.appendChild(card);
     }
 }
 
@@ -496,14 +504,15 @@ async function renderDashboard(data) {
     const advice = data.advice;
     const extras = advice.extras || {};
 
-    renderHero(data);
+    renderOverview(data);
     renderBadges(data.matchup, data.game);
     renderOverride(data);
+    renderFeatured(advice, extras);
+    renderTiles(extras);
     renderRunes(data.runes);
     renderBuild(advice, items, data.ddragonVersion);
     renderBuildStats(data.buildStats, items, data.ddragonVersion);
     renderLaneTips(advice);
-    renderDirection(advice, extras);
 
     renderTeam("blue-team", data.teams.blue, data.ddragonVersion);
     renderTeam("red-team", data.teams.red, data.ddragonVersion);
@@ -512,16 +521,15 @@ async function renderDashboard(data) {
     notes.replaceChildren();
     (data.teamNotes || []).forEach((note) => notes.appendChild(el("li", null, note)));
 
+    // Extra info: tiles cover resist/anti-heal/focus/threats, so this grid
+    // holds the remaining cards plus the quick tips.
     const extraCards = document.getElementById("extra-cards");
     extraCards.replaceChildren();
     const cards = [
         ["Jungle threat", extras.jungleThreat],
         ["Best recall timing", extras.recallTiming],
         ["First 10 minutes", extras.first10Min],
-        ["Who to focus", extras.focusTarget],
         ["Who to avoid", extras.avoidTarget],
-        ["Anti-heal needed?", extras.antiHeal],
-        ["Armor or MR priority", extras.resistPriority],
         ["Itemization warnings", extras.itemWarnings],
     ];
     for (const [title, content] of cards) {
@@ -529,8 +537,6 @@ async function renderDashboard(data) {
             extraCards.appendChild(extraCard(title, content));
         }
     }
-
-    // Extra tips live in the same section as a full-width card.
     if (advice.extraTips && advice.extraTips.length) {
         const tipsCard = extraCard("Quick tips", advice.extraTips);
         tipsCard.classList.add("span-all");
@@ -543,7 +549,7 @@ async function renderDashboard(data) {
     } else if (data.matchup.confidence === "inferred") {
         sourceNote.textContent =
             (data.aiEnhanced ? "AI-enhanced advice. " : "") +
-            "Lane opponent was inferred from champion roles and summoner spells — correct it above if wrong.";
+            "Lane opponent was inferred from champion roles and summoner spells — correct it in the overview if wrong.";
     } else {
         sourceNote.textContent = data.aiEnhanced
             ? "AI-enhanced advice from live game data."
