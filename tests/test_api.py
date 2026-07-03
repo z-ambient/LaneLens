@@ -51,11 +51,13 @@ class FakeRiotClient:
 
 @pytest.fixture
 def riot(monkeypatch):
-    """Patch RiotClient and pretend a key is configured."""
+    """Patch RiotClient, pretend a key is configured, and disable AI so tests
+    stay hermetic even when a real OPENAI_API_KEY exists in .env."""
     def _install(**kwargs):
         fake = FakeRiotClient(**kwargs)
         monkeypatch.setattr(main_module, "RiotClient", lambda: fake)
         monkeypatch.setattr(main_module, "riot_key_present", lambda: True)
+        monkeypatch.setattr(main_module, "refine_advice_with_ai", lambda context, base: None)
         return fake
     return _install
 

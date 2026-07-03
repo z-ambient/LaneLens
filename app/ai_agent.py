@@ -29,9 +29,12 @@ _INSTRUCTIONS = (
     "advice using real knowledge of the champions involved: name specific "
     "abilities to respect, real item names, and concrete level power spikes. "
     "Keep every field short and loading-screen friendly (1-3 sentences, no "
-    "markdown). Return ONLY a JSON object with exactly these keys: "
+    "markdown). buildDirection must briefly explain WHY the build fits this "
+    "game. Return ONLY a JSON object with exactly these keys: "
     + ", ".join(_TEXT_FIELDS)
-    + ", extraTips (array of 3-6 short strings), and extras (object with keys: "
+    + ", fullBuild (array of {label, item, options} - the full recommended "
+    "build order using exact in-game item names, with options as alternative "
+    "item names), extraTips (array of 3-6 short strings), and extras (object with keys: "
     + ", ".join(_EXTRA_FIELDS)
     + ", itemWarnings as array of short strings). Do not add other keys."
 )
@@ -71,6 +74,19 @@ def _parse_and_merge(raw_text, base_advice):
         value = data.get(field)
         if isinstance(value, str) and value.strip():
             merged[field] = value.strip()
+
+    full_build = data.get("fullBuild")
+    if isinstance(full_build, list):
+        cleaned = []
+        for slot in full_build[:8]:
+            if isinstance(slot, dict) and slot.get("item"):
+                cleaned.append({
+                    "label": str(slot.get("label", "Item")),
+                    "item": str(slot["item"]),
+                    "options": [str(option) for option in (slot.get("options") or [])][:3],
+                })
+        if cleaned:
+            merged["fullBuild"] = cleaned
 
     tips = data.get("extraTips")
     if isinstance(tips, list) and tips:

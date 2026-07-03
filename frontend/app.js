@@ -1,6 +1,6 @@
 // LaneLens frontend. Talks only to the LaneLens backend (/api/*) —
-// the Riot API key never reaches the browser. Champion icons come from
-// the public Data Dragon CDN (no key required).
+// the Riot API key never reaches the browser. Champion and item images
+// come from the public Data Dragon CDN (no key required).
 
 const form = document.getElementById("analyze-form");
 const analyzeBtn = document.getElementById("analyze-btn");
@@ -54,6 +54,61 @@ function showError(message) {
     errorPanel.classList.remove("hidden");
 }
 
+// ---------- Data Dragon item index (for item icons) ----------
+
+let itemIndexPromise = null;
+
+function loadItemIndex(version) {
+    if (!itemIndexPromise) {
+        itemIndexPromise = fetch(
+            `https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/item.json`
+        )
+            .then((response) => response.json())
+            .then((data) => {
+                const seen = new Set();
+                const items = [];
+                for (const [id, item] of Object.entries(data.data)) {
+                    if (!item.name || item.name.includes("<")) continue;
+                    const key = item.name.toLowerCase();
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    items.push({ id, name: item.name, nameLower: key });
+                }
+                // Longest names first so "Doran's Blade" wins over partial hits.
+                items.sort((a, b) => b.nameLower.length - a.nameLower.length);
+                return items;
+            })
+            .catch(() => []);
+    }
+    return itemIndexPromise;
+}
+
+// Find known item names mentioned inside a piece of advice text.
+function findItemsInText(items, text, limit) {
+    if (!text) return [];
+    const lower = text.toLowerCase();
+    const found = [];
+    for (const item of items) {
+        if (item.nameLower.length < 5) continue;
+        if (lower.includes(item.nameLower)) {
+            found.push(item);
+            if (found.length >= limit) break;
+        }
+    }
+    return found;
+}
+
+// Exact item lookup by name, falling back to a text scan.
+function findItem(items, name) {
+    if (!name) return null;
+    const lower = name.toLowerCase();
+    return (
+        items.find((item) => item.nameLower === lower) ||
+        findItemsInText(items, name, 1)[0] ||
+        null
+    );
+}
+
 // ---------- API calls ----------
 
 async function analyze(body) {
@@ -76,7 +131,7 @@ async function analyze(body) {
             showError(friendlyError(response.status, data.error));
             return;
         }
-        renderDashboard(data);
+        await renderDashboard(data);
     } catch (err) {
         showError("Could not reach the LaneLens backend. Make sure the server is running, then try again.");
     } finally {
@@ -91,7 +146,7 @@ async function loadDemo() {
     try {
         const response = await fetch("/api/demo-matchup");
         const data = await response.json();
-        renderDashboard(data);
+        await renderDashboard(data);
     } catch (err) {
         showError("Could not load the demo match. Is the backend running?");
     } finally {
@@ -110,7 +165,7 @@ function friendlyError(status, message) {
     return message || "Unexpected error. Try again, or use the demo match.";
 }
 
-// ---------- Rendering ----------
+// ---------- Rendering helpers ----------
 
 function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -130,42 +185,44 @@ function champIcon(imageKey, version, size) {
     return img;
 }
 
-function statItem(label, value) {
-    const wrap = el("div");
-    wrap.append(el("dt", null, label), el("dd", null, value || "—"));
-    return wrap;
+function itemIcon(itemId, version) {
+    const img = document.createElement("img");
+    img.alt = "";
+    img.src = `https://ddragon.leagueoflegends.com/cdn/${version}/img/item/${itemId}.png`;
+    return img;
 }
 
-function fillStatList(id, entries) {
-    const list = document.getElementById(id);
-    list.replaceChildren();
-    for (const [label, value] of entries) {
-        if (value) list.appendChild(statItem(label, value));
+// Loading-screen art for the hero section (versionless CDN path).
+function heroArt(imgEl, nameEl, imageKey, name) {
+    nameEl.textContent = name || "Unknown";
+    if (imageKey) {
+        imgEl.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${imageKey}_0.jpg`;
+        imgEl.style.visibility = "visible";
+    } else {
+        imgEl.removeAttribute("src");
+        imgEl.style.visibility = "hidden";
     }
 }
 
-function renderVersus(data) {
-    const versus = document.getElementById("versus");
-    versus.replaceChildren();
+// ---------- Section renderers ----------
 
+function renderHero(data) {
     const allMembers = [...data.teams.blue, ...data.teams.red];
     const me = allMembers.find((m) => m.isPlayer);
     const enemy = allMembers.find((m) => m.isOpponent);
 
-    const mine = el("div", "champ");
-    mine.append(
-        champIcon(me ? me.imageKey : null, data.ddragonVersion, 72),
-        el("strong", null, data.player.champion)
+    heroArt(
+        document.getElementById("hero-me"),
+        document.getElementById("hero-me-name"),
+        me && me.imageKey,
+        data.player.champion
     );
-    versus.appendChild(mine);
-    versus.appendChild(el("span", "vs", "VS"));
-
-    const theirs = el("div", "champ enemy");
-    theirs.append(
-        champIcon(enemy ? enemy.imageKey : null, data.ddragonVersion, 72),
-        el("strong", null, data.matchup.enemyChampion || "Select opponent")
+    heroArt(
+        document.getElementById("hero-enemy"),
+        document.getElementById("hero-enemy-name"),
+        enemy && enemy.imageKey,
+        data.matchup.enemyChampion || "Select opponent"
     );
-    versus.appendChild(theirs);
 }
 
 function renderBadges(matchup, game) {
@@ -205,8 +262,114 @@ function renderOverride(data) {
         select.appendChild(option);
     }
 
-    const laneSelect = document.getElementById("override-lane");
-    laneSelect.value = data.matchup.lane || "";
+    document.getElementById("override-lane").value = data.matchup.lane || "";
+}
+
+function slotIcon(item, version) {
+    const icon = el("div", "slot-icon");
+    if (item) {
+        icon.appendChild(itemIcon(item.id, version));
+    } else {
+        icon.classList.add("empty");
+        icon.textContent = "•";
+    }
+    return icon;
+}
+
+function buildSlotCard(slot, items, version) {
+    const card = el("div", "build-slot");
+    card.appendChild(el("span", "slot-label", slot.label));
+
+    const main = el("div", "slot-main");
+    main.append(
+        slotIcon(findItem(items, slot.item), version),
+        el("span", "slot-name", slot.item || "—")
+    );
+    card.appendChild(main);
+
+    const options = (slot.options || []).filter(Boolean);
+    if (options.length) {
+        const row = el("div", "slot-options");
+        row.appendChild(el("span", "or", "or"));
+        for (const name of options) {
+            const chip = el("span", "option-chip");
+            const match = findItem(items, name);
+            if (match) chip.appendChild(itemIcon(match.id, version));
+            chip.appendChild(el("span", null, name));
+            row.appendChild(chip);
+        }
+        card.appendChild(row);
+    }
+    return card;
+}
+
+function renderBuild(advice, items, version) {
+    const grid = document.getElementById("build-grid");
+    grid.replaceChildren();
+
+    // Full build with alternatives; fall back to the three basic slots if an
+    // (older/AI) response is missing fullBuild.
+    const slots = Array.isArray(advice.fullBuild) && advice.fullBuild.length
+        ? advice.fullBuild
+        : [
+              { label: "Starting", item: advice.startingItem, options: [] },
+              { label: "Boots", item: advice.boots, options: [] },
+              { label: "First Item", item: advice.firstItem, options: [] },
+          ];
+    for (const slot of slots) {
+        grid.appendChild(buildSlotCard(slot, items, version));
+    }
+
+    const direction = document.getElementById("build-direction");
+    direction.replaceChildren();
+    direction.appendChild(el("span", "slot-label", "Why this build"));
+    direction.appendChild(el("p", null, advice.buildDirection || "—"));
+}
+
+const TIP_GLYPHS = {
+    "Early lane plan": "▶",
+    "Trading pattern": "↔",
+    "Danger windows": "⚠",
+    "How to win lane": "★",
+    "Common mistakes": "✕",
+};
+
+function renderLaneTips(advice) {
+    const grid = document.getElementById("lane-tips");
+    grid.replaceChildren();
+    const steps = [
+        ["Early lane plan", advice.lanePlan, true],
+        ["Trading pattern", advice.tradingPattern, false],
+        ["Danger windows", advice.dangerWindows, false],
+        ["How to win lane", advice.howToWinLane, false],
+        ["Common mistakes", advice.commonMistakes, false],
+    ];
+    for (const [label, text, featured] of steps) {
+        if (!text) continue;
+        const card = el("div", "tip-card" + (featured ? " span-2" : ""));
+        const head = el("div", "tip-head");
+        head.append(el("span", "tip-glyph", TIP_GLYPHS[label] || "▸"), el("h4", null, label));
+        card.append(head, el("p", null, text));
+        grid.appendChild(card);
+    }
+}
+
+function renderDirection(advice, extras) {
+    const list = document.getElementById("direction-list");
+    list.replaceChildren();
+    const entries = [
+        ["Game direction", advice.gameDirection],
+        ["Teamfight plan", advice.teamfightPlan],
+        ["Win condition", extras.winCondition],
+        ["Biggest threats", extras.biggestThreats],
+        ["Play around", extras.playAround],
+    ];
+    for (const [label, text] of entries) {
+        if (!text) continue;
+        const item = el("div", "def-item");
+        item.append(el("span", "def-label", label), el("p", null, text));
+        list.appendChild(item);
+    }
 }
 
 function renderTeam(listId, members, version) {
@@ -216,7 +379,7 @@ function renderTeam(listId, members, version) {
         const item = el("li");
         if (member.isPlayer) item.classList.add("is-player");
         if (member.isOpponent) item.classList.add("is-opponent");
-        item.appendChild(champIcon(member.imageKey, version, 28));
+        item.appendChild(champIcon(member.imageKey, version, 30));
 
         let label = member.championName;
         if (member.isPlayer) label += " (You)";
@@ -241,38 +404,19 @@ function extraCard(title, content) {
     return card;
 }
 
-function renderDashboard(data) {
+async function renderDashboard(data) {
     errorPanel.classList.add("hidden");
 
-    renderVersus(data);
-    renderBadges(data.matchup, data.game);
-    renderOverride(data);
-
+    const items = await loadItemIndex(data.ddragonVersion);
     const advice = data.advice;
     const extras = advice.extras || {};
 
-    fillStatList("overview-list", [
-        ["Starting item", advice.startingItem],
-        ["Boots", advice.boots],
-        ["First item", advice.firstItem],
-        ["Build direction", advice.buildDirection],
-    ]);
-
-    fillStatList("lane-tips-list", [
-        ["Early lane plan", advice.lanePlan],
-        ["Trading pattern", advice.tradingPattern],
-        ["Danger windows", advice.dangerWindows],
-        ["How to win lane", advice.howToWinLane],
-        ["Common mistakes", advice.commonMistakes],
-    ]);
-
-    fillStatList("direction-list", [
-        ["Game direction", advice.gameDirection],
-        ["Teamfight plan", advice.teamfightPlan],
-        ["Win condition", extras.winCondition],
-        ["Biggest threats", extras.biggestThreats],
-        ["Play around", extras.playAround],
-    ]);
+    renderHero(data);
+    renderBadges(data.matchup, data.game);
+    renderOverride(data);
+    renderBuild(advice, items, data.ddragonVersion);
+    renderLaneTips(advice);
+    renderDirection(advice, extras);
 
     renderTeam("blue-team", data.teams.blue, data.ddragonVersion);
     renderTeam("red-team", data.teams.red, data.ddragonVersion);
@@ -299,9 +443,12 @@ function renderDashboard(data) {
         }
     }
 
-    const tips = document.getElementById("extra-tips");
-    tips.replaceChildren();
-    (advice.extraTips || []).forEach((tip) => tips.appendChild(el("li", null, tip)));
+    // Extra tips live in the same section as a full-width card.
+    if (advice.extraTips && advice.extraTips.length) {
+        const tipsCard = extraCard("Quick tips", advice.extraTips);
+        tipsCard.classList.add("span-all");
+        extraCards.appendChild(tipsCard);
+    }
 
     const sourceNote = document.getElementById("source-note");
     if (data.source === "demo") {
@@ -311,7 +458,9 @@ function renderDashboard(data) {
             (data.aiEnhanced ? "AI-enhanced advice. " : "") +
             "Lane opponent was inferred from champion roles and summoner spells — correct it above if wrong.";
     } else {
-        sourceNote.textContent = data.aiEnhanced ? "AI-enhanced advice from live game data." : "Advice generated from live game data.";
+        sourceNote.textContent = data.aiEnhanced
+            ? "AI-enhanced advice from live game data."
+            : "Advice generated from live game data.";
     }
 
     dashboard.classList.remove("hidden");

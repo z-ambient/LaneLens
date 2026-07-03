@@ -128,6 +128,158 @@ def _class_plans(my_class):
     return plans.get(my_class, plans["Fighter"])
 
 
+def _slot(label, item, options):
+    return {"label": label, "item": item, "options": options}
+
+
+# Class/damage-type core builds: (label, main item, alternatives).
+# Item names match Data Dragon so the frontend can show real item icons.
+_CLASS_BUILDS = {
+    "tank": [
+        ("Core", "Sunfire Aegis", ["Heartsteel", "Iceborn Gauntlet"]),
+        ("Armor", "Thornmail", ["Frozen Heart", "Randuin's Omen"]),
+        ("Magic Resist", "Kaenic Rookern", ["Spirit Visage", "Force of Nature"]),
+        ("Late Game", "Warmog's Armor", ["Jak'Sho, The Protean", "Knight's Vow"]),
+    ],
+    "fighter_ad": [
+        ("Core", "Trinity Force", ["Black Cleaver", "Stridebreaker"]),
+        ("Sustain", "Sterak's Gage", ["Death's Dance"]),
+        ("Defense", "Guardian Angel", ["Maw of Malmortius"]),
+        ("Late Game", "Spear of Shojin", ["Randuin's Omen"]),
+    ],
+    "fighter_ap": [
+        ("Core", "Riftmaker", ["Hextech Rocketbelt"]),
+        ("Utility", "Rylai's Crystal Scepter", ["Cosmic Drive"]),
+        ("Defense", "Zhonya's Hourglass", ["Banshee's Veil"]),
+        ("Late Game", "Rabadon's Deathcap", []),
+    ],
+    "assassin_ad": [
+        ("Core", "Eclipse", ["Youmuu's Ghostblade", "Hubris"]),
+        ("Lethality", "Edge of Night", ["Axiom Arc"]),
+        ("Penetration", "Serylda's Grudge", ["Lord Dominik's Regards"]),
+        ("Late Game", "Guardian Angel", []),
+    ],
+    "assassin_ap": [
+        ("Core", "Stormsurge", ["Lich Bane"]),
+        ("Damage", "Shadowflame", ["Horizon Focus"]),
+        ("Defense", "Zhonya's Hourglass", ["Banshee's Veil"]),
+        ("Late Game", "Rabadon's Deathcap", []),
+    ],
+    "mage": [
+        ("Core", "Luden's Companion", ["Blackfire Torch", "Malignance"]),
+        ("Damage", "Shadowflame", ["Horizon Focus"]),
+        ("Defense", "Zhonya's Hourglass", ["Banshee's Veil"]),
+        ("Late Game", "Rabadon's Deathcap", []),
+    ],
+    "marksman": [
+        ("Core", "Kraken Slayer", ["Essence Reaver", "Statikk Shiv"]),
+        ("Crit", "Infinity Edge", ["Navori Flickerblade"]),
+        ("Penetration", "Lord Dominik's Regards", ["Mortal Reminder"]),
+        ("Late Game", "Bloodthirster", ["Guardian Angel"]),
+    ],
+    "support": [
+        ("Core", "Echoes of Helia", ["Moonstone Renewer", "Locket of the Iron Solari"]),
+        ("Utility", "Redemption", ["Knight's Vow", "Ardent Censer"]),
+        ("Late Game", "Vigilant Wardstone", ["Mikael's Blessing", "Zeke's Convergence"]),
+    ],
+}
+
+
+def _class_build_key(my_class, ad):
+    if my_class in ("Tank", "Mage", "Marksman", "Support"):
+        return my_class.lower()
+    if my_class == "Assassin":
+        return "assassin_ad" if ad else "assassin_ap"
+    return "fighter_ad" if ad else "fighter_ap"
+
+
+def _full_build(my_class, ad, starting_item, boots, healers, resist_priority):
+    """Full recommended build path with alternatives per slot."""
+    start_options = {
+        "Marksman": ["Doran's Shield"],
+        "Mage": ["Doran's Shield"],
+        "Tank": ["Doran's Ring"],
+        "Support": [],
+    }.get(my_class, ["Doran's Blade" if "Shield" in starting_item else "Doran's Shield"])
+
+    boots_options = [
+        alt for alt in ("Plated Steelcaps", "Mercury's Treads", "Berserker's Greaves")
+        if alt not in boots
+    ][:2]
+
+    build = [
+        _slot("Starting", starting_item, start_options),
+        _slot("Boots", boots, boots_options),
+    ]
+    build.extend(
+        _slot(label, item, list(options))
+        for label, item, options in _CLASS_BUILDS[_class_build_key(my_class, ad)]
+    )
+
+    # Situational slot driven by the enemy comp.
+    if my_class == "Tank":
+        anti_heal, armor, mr = "Thornmail", "Randuin's Omen", "Abyssal Mask"
+    elif my_class in ("Mage", "Support") or not ad:
+        anti_heal, armor, mr = "Morellonomicon", "Zhonya's Hourglass", "Banshee's Veil"
+    elif my_class == "Marksman":
+        anti_heal, armor, mr = "Mortal Reminder", "Guardian Angel", "Maw of Malmortius"
+    else:
+        anti_heal, armor, mr = "Chempunk Chainsword", "Guardian Angel", "Maw of Malmortius"
+
+    if healers:
+        candidates = [anti_heal, armor, mr]
+    elif resist_priority == "Armor":
+        candidates = [armor, anti_heal, mr]
+    else:
+        candidates = [mr, anti_heal, armor]
+
+    # Don't recommend items already in the main build path.
+    already_built = {slot["item"] for slot in build} | {
+        option for slot in build for option in slot["options"]
+    }
+    candidates = [item for item in candidates if item not in already_built]
+    if candidates:
+        build.append(_slot("Situational", candidates[0], candidates[1:]))
+    return build
+
+
+def _build_reasoning(my_class, physical, magic, resist_priority, healers):
+    """Brief 'why this build' explanation."""
+    class_reason = {
+        "Tank": "Health and resists let you start fights and survive being focused",
+        "Fighter": "Mixing damage with durability wins you extended trades",
+        "Assassin": "Burst and penetration let you delete carries before they react",
+        "Mage": "Damage plus one defensive item keeps your spell rotation safe",
+        "Marksman": "Crit and attack speed scale your DPS - buy defense only if dived",
+        "Support": "Utility items multiply your team's power more than raw stats",
+    }.get(my_class, "Balance damage and durability")
+
+    reason = "{} first: {} of 5 enemies deal mostly {} damage. {}.".format(
+        resist_priority if resist_priority in ("Armor", "Magic resist") else "Mixed resists",
+        max(physical, magic),
+        "physical" if physical >= magic else "magic",
+        class_reason,
+    )
+    if healers:
+        reason += " Add anti-heal if {} get ahead.".format(" or ".join(healers))
+    return reason
+
+
+def _win_condition(my_class, my_team, enemy_team):
+    my_names = {champ["name"] for champ in my_team}
+    if len(my_names & SCALING_CHAMPIONS) >= 2:
+        return "Your comp outscales - survive early, hit item spikes, win late fights."
+    if len(my_names & ENGAGE_CHAMPIONS) >= 2:
+        return "Your comp wins with engage - force picks and fights on your timing."
+    return {
+        "Tank": "Land your engage on their carries and let your damage follow.",
+        "Assassin": "Snowball picks on isolated targets before grouped fights.",
+        "Marksman": "Stay alive and keep dealing damage - your DPS decides fights.",
+        "Support": "Keep your best carry alive through every fight.",
+        "Mage": "Control choke points and chunk them before fights start.",
+    }.get(my_class, "Win side-lane pressure and join fights slightly ahead.")
+
+
 def _difficulty(my_champ, enemy_champ):
     """Honest rough estimate when no curated data exists."""
     if enemy_champ is None:
@@ -214,18 +366,20 @@ def build_advice(my_champ, enemy_champ, my_lane, my_team, enemy_team):
 
     difficulty = curated["difficulty"] if curated else _difficulty(my_champ, enemy_champ)
 
+    starting_item = curated["first_buy"] if curated else _starting_item(my_class, enemy_champ, my_lane)
+    boots = _boots(my_class, enemy_champ, enemy_team)
+    full_build = _full_build(
+        my_class, _is_ad(my_champ), starting_item, boots, healers, resist_priority
+    )
+    reasoning = _build_reasoning(my_class, physical, magic, resist_priority, healers)
+
     advice = {
-        "startingItem": curated["first_buy"] if curated else _starting_item(my_class, enemy_champ, my_lane),
-        "boots": _boots(my_class, enemy_champ, enemy_team),
-        "firstItem": (
-            "Follow your build direction below - finish your first full item before contesting long fights."
-            if curated else
-            "Take your champion's standard first item; adjust defensively if you fall behind against {}.".format(enemy_name)
-        ),
-        "buildDirection": curated["build_direction"] if curated else (
-            "{} priority based on the enemy comp ({} physical / {} magic threats).".format(
-                resist_priority, physical, magic
-            )
+        "startingItem": starting_item,
+        "boots": boots,
+        "firstItem": full_build[2]["item"],
+        "fullBuild": full_build,
+        "buildDirection": (
+            "{} {}".format(curated["build_direction"], reasoning) if curated else reasoning
         ),
         "lanePlan": curated["lane_plan"] if curated else (
             "Play the first waves safely, learn {}'s trading pattern, and only commit when their key ability is down.".format(enemy_name)
@@ -248,7 +402,7 @@ def build_advice(my_champ, enemy_champ, my_lane, my_team, enemy_team):
         ],
         # Extended fields used by the dashboard's Game Direction / Extra Info cards.
         "extras": {
-            "winCondition": plans["gameDirection"],
+            "winCondition": _win_condition(my_class, my_team, enemy_team),
             "biggestThreats": focus,
             "playAround": play_around or "your strongest scaling teammate",
             "focusTarget": focus,

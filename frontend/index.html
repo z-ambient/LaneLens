@@ -67,37 +67,54 @@
 
         <!-- Dashboard -->
         <div id="dashboard" class="hidden">
-            <section class="panel matchup-header">
-                <div class="versus" id="versus"></div>
-                <div class="badges" id="matchup-badges"></div>
-                <div id="override-area" class="override-area hidden">
-                    <span>Wrong opponent?</span>
-                    <select id="override-champion"></select>
-                    <select id="override-lane">
-                        <option value="">My lane...</option>
-                        <option>Top</option><option>Jungle</option><option>Mid</option>
-                        <option>Bot</option><option>Support</option>
-                    </select>
-                    <button type="button" id="override-btn" class="btn-ghost small">Re-analyze</button>
+
+            <!-- Hero: you vs lane opponent -->
+            <section class="hero">
+                <div class="hero-card you">
+                    <img id="hero-me" alt="">
+                    <span class="hero-tag">You</span>
+                    <span class="hero-name" id="hero-me-name"></span>
                 </div>
+                <div class="hero-center">
+                    <span class="vs-mark">VS</span>
+                    <div class="badges" id="matchup-badges"></div>
+                    <div id="override-area" class="override-area hidden">
+                        <span>Wrong opponent?</span>
+                        <div class="override-controls">
+                            <select id="override-champion"></select>
+                            <select id="override-lane">
+                                <option value="">My lane...</option>
+                                <option>Top</option><option>Jungle</option><option>Mid</option>
+                                <option>Bot</option><option>Support</option>
+                            </select>
+                            <button type="button" id="override-btn" class="btn-ghost small">Re-analyze</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-card enemy">
+                    <img id="hero-enemy" alt="">
+                    <span class="hero-tag">Enemy</span>
+                    <span class="hero-name" id="hero-enemy-name"></span>
+                </div>
+            </section>
+
+            <!-- Full build path with item icons -->
+            <section class="panel">
+                <h2>Recommended Build</h2>
+                <div class="build-grid" id="build-grid"></div>
+                <div class="build-direction" id="build-direction"></div>
+            </section>
+
+            <!-- Lane matchup tips -->
+            <section class="panel priority">
+                <h2>Lane Matchup Tips</h2>
+                <div class="tips-grid" id="lane-tips"></div>
             </section>
 
             <div class="grid-2">
                 <section class="panel">
-                    <h2>Matchup Overview</h2>
-                    <dl id="overview-list" class="stat-list"></dl>
-                </section>
-
-                <section class="panel priority">
-                    <h2>Lane Matchup Tips</h2>
-                    <dl id="lane-tips-list" class="stat-list"></dl>
-                </section>
-            </div>
-
-            <div class="grid-2">
-                <section class="panel">
                     <h2>Game Direction</h2>
-                    <dl id="direction-list" class="stat-list"></dl>
+                    <div class="def-list" id="direction-list"></div>
                 </section>
 
                 <section class="panel">
@@ -119,11 +136,6 @@
             <section class="panel">
                 <h2>Extra Useful Info</h2>
                 <div id="extra-cards" class="extra-grid"></div>
-            </section>
-
-            <section class="panel tips-panel">
-                <h2>Extra Tips</h2>
-                <ul id="extra-tips"></ul>
                 <p id="source-note" class="source-note"></p>
             </section>
         </div>

@@ -57,8 +57,21 @@ def get_demo_response(ddragon_version):
         "advice": {
             "startingItem": "Doran's Shield",
             "boots": "Plated Steelcaps",
-            "firstItem": "Tank armor item",
-            "buildDirection": "Tank Malphite unless the team badly needs magic damage",
+            "firstItem": "Sunfire Aegis",
+            "fullBuild": [
+                {"label": "Starting", "item": "Doran's Shield", "options": ["Doran's Ring"]},
+                {"label": "Boots", "item": "Plated Steelcaps", "options": ["Mercury's Treads"]},
+                {"label": "Core", "item": "Sunfire Aegis", "options": ["Heartsteel", "Iceborn Gauntlet"]},
+                {"label": "Armor", "item": "Thornmail", "options": ["Frozen Heart", "Randuin's Omen"]},
+                {"label": "Magic Resist", "item": "Kaenic Rookern", "options": ["Spirit Visage"]},
+                {"label": "Late Game", "item": "Warmog's Armor", "options": ["Jak'Sho, The Protean"]},
+                {"label": "Situational", "item": "Abyssal Mask", "options": ["Randuin's Omen"]},
+            ],
+            "buildDirection": (
+                "Tank Malphite unless the team badly needs magic damage. Armor first - "
+                "four of five enemies deal physical damage and it doubles your passive "
+                "shield value against Sett. Thornmail covers anti-heal if he snowballs."
+            ),
             "lanePlan": (
                 "Play safe early and use Q to poke when Manaflow Band is available. "
                 "Avoid long trades because Sett wins extended fights. Your goal is to "
