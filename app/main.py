@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app import advice_cache, champions, runes
+from app import advice_cache, champions, matchup_history, runes
 from app.advice_engine import build_advice, build_team_notes
 from app.ai_agent import refine_advice_with_ai
 from app.config import DEFAULT_PLATFORM, REGION_BY_PLATFORM, riot_key_present
@@ -216,6 +216,33 @@ def analyze_matchup(body: AnalyzeRequest):
         "runes": selected_runes,
         "advice": advice,
     }
+
+
+class HistoryRequest(BaseModel):
+    puuid: str
+    platform: str = DEFAULT_PLATFORM
+    region: Optional[str] = None
+    myChampion: str
+    enemyChampion: str
+
+
+@app.post("/api/matchup-history")
+def get_matchup_history(body: HistoryRequest):
+    """Background lookup: the player's real win/loss record in this matchup.
+
+    Walks recent Match-v5 games (only ones not seen before - results persist
+    on disk) and returns e.g. 3W-1L as Malphite vs Sett.
+    """
+    if not riot_key_present():
+        return error_response(503, "Server is missing its Riot API key.")
+
+    region = (body.region or REGION_BY_PLATFORM.get(body.platform.lower(), "americas")).lower()
+    record = matchup_history.get_matchup_record(
+        RiotClient(), body.puuid, region, body.myChampion, body.enemyChampion
+    )
+    if record is None:
+        return {"ok": False, "error": "Match history is unavailable right now."}
+    return {"ok": True, "record": record}
 
 
 class EnhanceRequest(BaseModel):

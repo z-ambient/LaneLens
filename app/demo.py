@@ -32,6 +32,8 @@ def get_demo_response(ddragon_version):
             "difficulty": "Medium",
             "confidence": "confirmed",
         },
+        "matchupHistory": {"games": 4, "wins": 3, "losses": 1,
+                           "recent": ["win", "win", "loss", "win"]},
         "teams": {
             "blue": [
                 _member("Malphite", "Malphite", is_player=True, lane="Top"),

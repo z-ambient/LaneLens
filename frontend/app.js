@@ -43,6 +43,7 @@ function saveProfile(profile) {
         /* storage unavailable (private mode) - feature just stays off */
     }
     renderProfileArea();
+    syncWatch();
 }
 
 function clearProfile() {
@@ -52,6 +53,7 @@ function clearProfile() {
         /* ignore */
     }
     renderProfileArea(true);
+    syncWatch();
 }
 
 // Show one-click "Find My Matchup" when a player is saved; otherwise the form.
@@ -76,6 +78,7 @@ function renderProfileArea(forceForm) {
 // ---------- UI state helpers ----------
 
 function setBusy(busy) {
+    isBusy = busy;
     analyzeBtn.disabled = busy;
     demoBtn.disabled = busy;
     analyzeBtn.textContent = busy ? "Analyzing..." : "Analyze My Matchup";
@@ -196,10 +199,12 @@ async function analyze(body) {
             });
         }
         // Progressive load: show the instant deterministic result now, then
-        // let the AI refine it in the background.
+        // let the AI and match history fill in from the background.
+        currentGameStart = (data.game && data.game.gameStartTime) || null;
         await renderDashboard(data);
         if (data.source === "riot-api" && data.matchup.enemyChampion) {
             enhanceAdvice(data);
+            fetchMatchupHistory(data);
         }
     } catch (err) {
         showError("Could not reach the LaneLens backend. Make sure the server is running, then try again.");
@@ -221,6 +226,171 @@ async function loadDemo() {
     } finally {
         stopLoading();
         setBusy(false);
+    }
+}
+
+// ---------- Personal matchup history (background lookup) ----------
+
+let historyToken = 0;
+
+function renderHistoryLine(record, myChampion, enemyChampion) {
+    const line = document.getElementById("history-line");
+    line.replaceChildren();
+    if (!record) {
+        line.classList.add("hidden");
+        return;
+    }
+    line.classList.remove("hidden");
+
+    const text =
+        record.games === 0
+            ? `No recorded games as ${myChampion} vs ${enemyChampion} yet`
+            : `Your record as ${myChampion} vs ${enemyChampion}: ${record.wins}W – ${record.losses}L`;
+    line.appendChild(el("span", null, text));
+
+    // Form strip: last 5 meetings, newest first; dots pad missing games.
+    const strip = el("span", "form-strip");
+    strip.title = "Last 5 games in this matchup (newest first)";
+    const recent = record.recent || [];
+    for (let slot = 0; slot < 5; slot++) {
+        const result = recent[slot];
+        if (result === "win") {
+            strip.appendChild(el("span", "form-badge form-w", "W"));
+        } else if (result === "loss") {
+            strip.appendChild(el("span", "form-badge form-l", "L"));
+        } else {
+            strip.appendChild(el("span", "form-badge form-empty"));
+        }
+    }
+    line.appendChild(strip);
+}
+
+async function fetchMatchupHistory(data) {
+    const token = ++historyToken;
+    try {
+        const response = await fetch("/api/matchup-history", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                puuid: data.player.puuid,
+                platform: (lastRequestBody && lastRequestBody.platform) || "na1",
+                myChampion: data.player.champion,
+                enemyChampion: data.matchup.enemyChampion,
+            }),
+        });
+        const result = await response.json();
+        if (token !== historyToken) return;
+        if (result.ok) {
+            renderHistoryLine(result.record, data.player.champion, data.matchup.enemyChampion);
+        }
+    } catch (err) {
+        /* history is optional - stay hidden on failure */
+    }
+}
+
+// ---------- Auto-detect: watch for the saved player's next game ----------
+
+const AUTODETECT_KEY = "lanelens.autodetect";
+const WATCH_INTERVAL_MS = 30000;
+
+let watchTimer = null;
+let watchBackoff = 0;
+let currentGameStart = null;
+let isBusy = false;
+
+function autoDetectEnabled() {
+    try {
+        return localStorage.getItem(AUTODETECT_KEY) === "1";
+    } catch (err) {
+        return false;
+    }
+}
+
+function setWatchStatus(text) {
+    const chip = document.getElementById("watch-status");
+    if (text) {
+        chip.classList.remove("hidden");
+        document.getElementById("watch-text").textContent = text;
+    } else {
+        chip.classList.add("hidden");
+    }
+}
+
+function syncWatch() {
+    const button = document.getElementById("auto-detect");
+    const on = autoDetectEnabled();
+    button.textContent = "Auto-detect: " + (on ? "On" : "Off");
+    button.classList.toggle("on", on);
+
+    const shouldRun = on && !!loadProfile();
+    if (shouldRun && !watchTimer) {
+        watchTimer = setInterval(watchTick, WATCH_INTERVAL_MS);
+        setWatchStatus("Watching for your next game…");
+        watchTick();
+    } else if (!shouldRun && watchTimer) {
+        clearInterval(watchTimer);
+        watchTimer = null;
+        setWatchStatus(null);
+    } else if (!shouldRun) {
+        setWatchStatus(null);
+    }
+}
+
+// One silent poll: no loading screen, no error panel.
+async function watchTick() {
+    if (document.hidden || isBusy) return;
+    if (watchBackoff > 0) {
+        watchBackoff--;
+        return;
+    }
+    const profile = loadProfile();
+    if (!profile) return;
+
+    const stamp = new Date().toLocaleTimeString();
+    try {
+        const response = await fetch("/api/analyze-matchup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                gameName: profile.gameName,
+                tagLine: profile.tagLine,
+                platform: profile.platform || "na1",
+            }),
+        });
+        const data = await response.json().catch(() => null);
+
+        if (response.status === 429) {
+            watchBackoff = 3; // give the rate limit ~90s of air
+            setWatchStatus(`Rate limited — pausing checks · ${stamp}`);
+            return;
+        }
+        if (!data || !data.ok) {
+            setWatchStatus(`Watching for your next game · checked ${stamp}`);
+            return;
+        }
+
+        const gameStart = data.game && data.game.gameStartTime;
+        if (gameStart && gameStart === currentGameStart) {
+            setWatchStatus("In game — dashboard is live");
+            return; // same game already on screen; don't reset the view
+        }
+
+        // New live game found: bring up the full dashboard.
+        currentGameStart = gameStart || Date.now();
+        lastRequestBody = {
+            gameName: profile.gameName,
+            tagLine: profile.tagLine,
+            platform: profile.platform || "na1",
+        };
+        setWatchStatus("Game found — analyzing!");
+        await renderDashboard(data);
+        if (data.matchup.enemyChampion) {
+            enhanceAdvice(data);
+            fetchMatchupHistory(data);
+        }
+        setWatchStatus("In game — dashboard is live");
+    } catch (err) {
+        setWatchStatus(`Backend unreachable · ${stamp}`);
     }
 }
 
@@ -770,6 +940,8 @@ async function renderDashboard(data) {
     renderOverview(data);
     renderBadges(data.matchup, data.game);
     renderOverride(data);
+    // Demo ships a canned record; live games fill this in from the background.
+    renderHistoryLine(data.matchupHistory || null, data.player.champion, data.matchup.enemyChampion);
     renderRunes(data.runes);
     renderAdviceSections(data.advice, items, data.ddragonVersion);
 
@@ -847,5 +1019,20 @@ document.getElementById("find-my-matchup").addEventListener("click", () => {
 document.getElementById("profile-change").addEventListener("click", () => renderProfileArea(true));
 document.getElementById("profile-clear").addEventListener("click", clearProfile);
 
+document.getElementById("auto-detect").addEventListener("click", () => {
+    try {
+        localStorage.setItem(AUTODETECT_KEY, autoDetectEnabled() ? "0" : "1");
+    } catch (err) {
+        /* storage unavailable */
+    }
+    syncWatch();
+});
+
+// Check immediately when the tab becomes visible again.
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && watchTimer) watchTick();
+});
+
 // Restore the saved player on page load.
 renderProfileArea();
+syncWatch();

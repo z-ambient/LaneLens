@@ -40,6 +40,11 @@
                     <button type="button" id="profile-change" class="chip-btn" title="Use a different Riot ID">change</button>
                     <button type="button" id="profile-clear" class="chip-btn" title="Forget saved player">✕</button>
                 </span>
+                <button type="button" id="auto-detect" class="chip-btn auto-btn" title="Automatically analyze when a live game is found">Auto-detect: Off</button>
+                <span id="watch-status" class="watch-status hidden">
+                    <span class="watch-dot"></span>
+                    <span id="watch-text">Watching for your next game…</span>
+                </span>
             </div>
 
             <form id="analyze-form" class="topbar-form" novalidate>
@@ -102,6 +107,7 @@
                         </div>
                         <div class="ov-side">
                             <div class="badges" id="matchup-badges"></div>
+                            <p id="history-line" class="history-line hidden"></p>
                             <div id="override-area" class="override-area hidden">
                                 <span>Wrong opponent?</span>
                                 <div class="override-controls">

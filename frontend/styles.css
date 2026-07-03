@@ -171,6 +171,31 @@ body {
 
 .chip-btn:hover { color: var(--gold-light); background: rgba(200, 155, 60, 0.12); }
 
+.auto-btn {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 12px;
+}
+
+.auto-btn.on { color: var(--gold-light); border-color: var(--gold); }
+
+.watch-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted-text);
+    font-size: 0.78rem;
+}
+
+.watch-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--blue-team);
+    box-shadow: 0 0 8px rgba(85, 199, 255, 0.7);
+    animation: aiPulse 1.6s ease-in-out infinite;
+}
+
 .topbar-form input, .topbar-form select {
     padding: 9px 12px;
     color: var(--text);
@@ -397,6 +422,53 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
 .ov-side { display: grid; gap: 10px; flex: 1; min-width: 200px; }
 .ov-side .badges { margin-top: 0; }
 .ov-side .override-area { margin-top: 0; }
+
+.history-line {
+    margin: 0;
+    padding: 8px 12px;
+    background: rgba(200, 155, 60, 0.08);
+    border: 1px solid rgba(200, 155, 60, 0.3);
+    border-radius: 8px;
+    color: var(--gold-light);
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.form-strip { display: inline-flex; gap: 5px; align-items: center; }
+
+.form-badge {
+    width: 19px;
+    height: 19px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 0.6rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.form-badge.form-w {
+    background: var(--easy);
+    color: #062818;
+    box-shadow: 0 2px 8px rgba(76, 208, 141, 0.35);
+}
+
+.form-badge.form-l {
+    background: var(--hard);
+    color: #350c0c;
+    box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.form-badge.form-empty {
+    width: 17px;
+    height: 17px;
+    border: 1px dashed rgba(169, 180, 194, 0.45);
+    background: transparent;
+}
 
 .ov-champs { display: flex; align-items: center; gap: 14px; }
 

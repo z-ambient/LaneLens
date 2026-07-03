@@ -41,6 +41,14 @@ evolved from the original [LaneLens-Manual](https://github.com/z-ambient/LaneLen
    you use it. Team-dependent fields (win condition, biggest threats, who
    to play around) are never cached — they are regenerated from the actual
    teams in every game.
+8. **Auto-detect and matchup history** — with a saved player and Auto-detect
+   on, the frontend quietly polls every 30s and brings up the dashboard the
+   moment a live game appears (pauses while the tab is hidden; backs off on
+   rate limits). The overview also shows your real win/loss record in the
+   current matchup, built from Match-v5: each analysis processes only games
+   it has never seen before (stored in `data/matchup_history.json`,
+   gitignored), pairing you with the enemy in your `teamPosition` on
+   Summoner's Rift queues and skipping remakes.
 
 ## Setup
 
@@ -102,6 +110,7 @@ e.g. `404` with `"No live League of Legends game found for this player."`
 | Route | Description |
 |---|---|
 | `POST /api/enhance-advice` | Background AI refinement of a matchup (cache-first; see step 7 above) |
+| `POST /api/matchup-history` | Background lookup of the player's real W/L record in this matchup (Match-v5, incremental disk store) |
 | `GET /api/demo-matchup` | Demo Malphite-vs-Sett dashboard data (no Riot call) |
 | `GET /api/health` | Backend health + whether the Riot key is configured |
 | `GET /` | The dashboard frontend |
