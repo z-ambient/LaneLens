@@ -23,6 +23,21 @@
 
 * { box-sizing: border-box; }
 
+/* Inline SVG icons inherit currentColor; parents set the size. */
+.icon { width: 14px; height: 14px; display: block; }
+.tile-glyph .icon { width: 18px; height: 18px; }
+.extra-glyph .icon { width: 13px; height: 13px; }
+.shard-dot .icon { width: 10px; height: 10px; margin: 0 auto; }
+.rail-logo svg { width: 26px; height: 26px; }
+.rail-icon svg { width: 17px; height: 17px; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
 body {
     margin: 0;
     min-height: 100vh;
@@ -120,6 +135,42 @@ body {
     flex-wrap: wrap;
 }
 
+/* Saved-player area (replaces the form when a profile is remembered) */
+.profile-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 260px;
+    flex-wrap: wrap;
+}
+
+.profile-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px 7px 14px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.85rem;
+}
+
+.profile-chip #profile-name { color: var(--gold-light); font-weight: 700; }
+
+.chip-btn {
+    background: none;
+    border: none;
+    color: var(--muted-text);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 6px;
+    border-radius: 6px;
+}
+
+.chip-btn:hover { color: var(--gold-light); background: rgba(200, 155, 60, 0.12); }
+
 .topbar-form input, .topbar-form select {
     padding: 9px 12px;
     color: var(--text);
@@ -197,9 +248,11 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
 .panel h3 {
     margin: 0 0 14px;
     color: var(--gold-light);
-    font-size: 0.8rem;
+    font-family: "Cinzel", "Times New Roman", serif;
+    font-size: 0.88rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1.6px;
+    letter-spacing: 1.8px;
 }
 
 /* ---------- Loading / errors ---------- */
@@ -232,6 +285,32 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
     grid-template-columns: repeat(12, minmax(0, 1fr));
     gap: 16px;
     scroll-margin-top: 84px;
+}
+
+/* Staggered fade-up when the dashboard is revealed. */
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+}
+
+.dash > * { animation: fadeUp 0.45s ease backwards; }
+.dash > *:nth-child(2) { animation-delay: 0.06s; }
+.dash > *:nth-child(3) { animation-delay: 0.12s; }
+.dash > *:nth-child(4) { animation-delay: 0.18s; }
+.dash > *:nth-child(5) { animation-delay: 0.24s; }
+.dash > *:nth-child(6) { animation-delay: 0.3s; }
+.dash > *:nth-child(7) { animation-delay: 0.36s; }
+.dash > *:nth-child(8) { animation-delay: 0.42s; }
+
+/* Hover lift for small cards. */
+.tile, .extra-card, .tip-card, .flow-step, .featured-row {
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.tile:hover, .extra-card:hover, .tip-card:hover, .flow-step:hover, .featured-row:hover {
+    transform: translateY(-2px);
+    border-color: rgba(200, 155, 60, 0.5);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
 }
 
 .main-card  { grid-column: span 8; }
@@ -323,6 +402,7 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
 
 .vs-mark {
     color: var(--gold);
+    font-family: "Cinzel", "Times New Roman", serif;
     font-weight: 800;
     letter-spacing: 3px;
     font-size: 1.35rem;
@@ -561,9 +641,7 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
 .shard-dot {
     width: 28px;
     margin-left: 7px;
-    text-align: center;
     color: var(--gold);
-    font-size: 0.62rem;
     flex-shrink: 0;
 }
 

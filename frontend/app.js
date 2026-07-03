@@ -22,12 +22,66 @@ const LOADING_STEPS = [
 let loadingTimer = null;
 let lastRequestBody = null;
 
+// ---------- Saved player profile (browser localStorage) ----------
+
+const PROFILE_KEY = "lanelens.profile";
+
+function loadProfile() {
+    try {
+        const raw = localStorage.getItem(PROFILE_KEY);
+        const profile = raw ? JSON.parse(raw) : null;
+        return profile && profile.gameName && profile.tagLine ? profile : null;
+    } catch (err) {
+        return null;
+    }
+}
+
+function saveProfile(profile) {
+    try {
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    } catch (err) {
+        /* storage unavailable (private mode) - feature just stays off */
+    }
+    renderProfileArea();
+}
+
+function clearProfile() {
+    try {
+        localStorage.removeItem(PROFILE_KEY);
+    } catch (err) {
+        /* ignore */
+    }
+    renderProfileArea(true);
+}
+
+// Show one-click "Find My Matchup" when a player is saved; otherwise the form.
+function renderProfileArea(forceForm) {
+    const profile = loadProfile();
+    const area = document.getElementById("profile-area");
+    const showForm = forceForm || !profile;
+
+    area.classList.toggle("hidden", showForm);
+    form.classList.toggle("hidden", !showForm);
+
+    if (profile) {
+        document.getElementById("profile-name").textContent =
+            `${profile.gameName} #${profile.tagLine}`;
+        // Prefill the form for when the user switches back to it.
+        document.getElementById("game-name").value = profile.gameName;
+        document.getElementById("tag-line").value = profile.tagLine;
+        if (profile.platform) document.getElementById("platform").value = profile.platform;
+    }
+}
+
 // ---------- UI state helpers ----------
 
 function setBusy(busy) {
     analyzeBtn.disabled = busy;
     demoBtn.disabled = busy;
     analyzeBtn.textContent = busy ? "Analyzing..." : "Analyze My Matchup";
+    const findBtn = document.getElementById("find-my-matchup");
+    findBtn.disabled = busy;
+    findBtn.textContent = busy ? "Analyzing..." : "Find My Matchup";
 }
 
 function startLoading() {
@@ -131,6 +185,14 @@ async function analyze(body) {
             showError(friendlyError(response.status, data.error));
             return;
         }
+        // Remember this player so next time is one click.
+        if (data.source === "riot-api" && data.player) {
+            saveProfile({
+                gameName: data.player.gameName || body.gameName,
+                tagLine: data.player.tagLine || body.tagLine,
+                platform: body.platform,
+            });
+        }
         await renderDashboard(data);
     } catch (err) {
         showError("Could not reach the LaneLens backend. Make sure the server is running, then try again.");
@@ -163,6 +225,41 @@ function friendlyError(status, message) {
         return "Riot API rate limit hit. Wait a minute, then try again.";
     }
     return message || "Unexpected error. Try again, or use the demo match.";
+}
+
+// ---------- Inline SVG icon set (stroke style, inherits currentColor) ----------
+
+const ICONS = {
+    play: '<polygon points="6 4 20 12 6 20 6 4"/>',
+    trade: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+    alert: '<path d="m10.29 3.86-8.2 14.14A2 2 0 0 0 3.8 21h16.4a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+    star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+    x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+    compass: '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',
+    flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    heal: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
+    target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    recall: '<path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+    eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>',
+    zap: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    diamond: '<path d="M12 2 22 12 12 22 2 12 12 2z"/>',
+};
+
+function icon(name) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("icon");
+    svg.innerHTML = ICONS[name] || ICONS.star;
+    return svg;
 }
 
 // ---------- Rendering helpers ----------
@@ -228,12 +325,13 @@ function renderOverview(data) {
         splash.style.display = "none";
     }
 
+    // Reset the dial; the difficulty class is applied after the dashboard is
+    // visible (see renderDashboard) so the arc animates up from zero.
     const ring = document.getElementById("diff-ring");
     ring.className = "diff-ring";
     const difficulty = data.matchup.difficulty || "—";
-    if (difficulty !== "—") {
-        ring.classList.add("difficulty-" + difficulty.toLowerCase());
-    }
+    ring.dataset.difficulty =
+        difficulty !== "—" ? "difficulty-" + difficulty.toLowerCase() : "";
     document.getElementById("diff-text").textContent = difficulty;
 }
 
@@ -272,9 +370,11 @@ function renderOverride(data) {
     document.getElementById("override-lane").value = data.matchup.lane || "";
 }
 
-function featuredRow(glyph, label, text, headline) {
+function featuredRow(iconName, label, text, headline) {
     const row = el("div", "featured-row" + (headline ? " headline" : ""));
-    row.appendChild(el("span", "glyph", glyph));
+    const glyph = el("span", "glyph");
+    glyph.appendChild(icon(iconName));
+    row.appendChild(glyph);
     const wrap = el("div", "fr-text");
     wrap.append(el("span", "fr-label", label), el("p", null, text));
     row.appendChild(wrap);
@@ -285,13 +385,13 @@ function renderFeatured(advice, extras) {
     const rows = document.getElementById("featured-rows");
     rows.replaceChildren();
     const entries = [
-        ["★", "Win condition", extras.winCondition, true],
-        ["▶", "Game direction", advice.gameDirection, false],
-        ["⚑", "Teamfight plan", advice.teamfightPlan, false],
-        ["♦", "Play around", extras.playAround, false],
+        ["star", "Win condition", extras.winCondition, true],
+        ["compass", "Game direction", advice.gameDirection, false],
+        ["flag", "Teamfight plan", advice.teamfightPlan, false],
+        ["users", "Play around", extras.playAround, false],
     ];
-    for (const [glyph, label, text, headline] of entries) {
-        if (text) rows.appendChild(featuredRow(glyph, label, text, headline));
+    for (const [iconName, label, text, headline] of entries) {
+        if (text) rows.appendChild(featuredRow(iconName, label, text, headline));
     }
 }
 
@@ -299,15 +399,17 @@ function renderTiles(extras) {
     const tiles = document.getElementById("stat-tiles");
     tiles.replaceChildren();
     const entries = [
-        ["🛡", "g-gold", "Armor or MR priority", extras.resistPriority],
-        ["✚", "g-green", "Anti-heal needed?", extras.antiHeal],
-        ["◎", "g-red", "Who to focus", extras.focusTarget],
-        ["⚠", "g-blue", "Biggest threats", extras.biggestThreats],
+        ["shield", "g-gold", "Armor or MR priority", extras.resistPriority],
+        ["heal", "g-green", "Anti-heal needed?", extras.antiHeal],
+        ["target", "g-red", "Who to focus", extras.focusTarget],
+        ["alert", "g-blue", "Biggest threats", extras.biggestThreats],
     ];
-    for (const [glyph, color, label, value] of entries) {
+    for (const [iconName, color, label, value] of entries) {
         if (!value) continue;
         const tile = el("div", "tile");
-        tile.appendChild(el("span", "tile-glyph " + color, glyph));
+        const glyph = el("span", "tile-glyph " + color);
+        glyph.appendChild(icon(iconName));
+        tile.appendChild(glyph);
         const meta = el("div", "tile-meta");
         meta.append(el("span", "tile-label", label), el("p", null, value));
         tile.appendChild(meta);
@@ -371,7 +473,9 @@ function renderRunes(runesData) {
         shards.appendChild(runeTreeHeader(null, "Shards"));
         runesData.shards.forEach((shard) => {
             const row = el("div", "rune-row shard");
-            row.appendChild(el("span", "shard-dot", "◆"));
+            const dot = el("span", "shard-dot");
+            dot.appendChild(icon("diamond"));
+            row.appendChild(dot);
             const meta = el("div", "rune-row-meta");
             // Shards may be plain strings (older payloads) or {name, desc}.
             meta.appendChild(el("span", "rune-row-name", shard.name || shard));
@@ -455,12 +559,12 @@ function renderBuild(advice, items, version) {
     direction.appendChild(el("p", null, advice.buildDirection || "—"));
 }
 
-const TIP_GLYPHS = {
-    "Early lane plan": "▶",
-    "Trading pattern": "↔",
-    "Danger windows": "⚠",
-    "How to win lane": "★",
-    "Common mistakes": "✕",
+const TIP_ICONS = {
+    "Early lane plan": "play",
+    "Trading pattern": "trade",
+    "Danger windows": "alert",
+    "How to win lane": "star",
+    "Common mistakes": "x",
 };
 
 function renderLaneTips(advice) {
@@ -477,7 +581,9 @@ function renderLaneTips(advice) {
         if (!text) continue;
         const card = el("div", "tip-card" + (headline ? " headline" : ""));
         const head = el("div", "tip-head");
-        head.append(el("span", "tip-glyph", TIP_GLYPHS[label] || "▸"), el("h4", null, label));
+        const glyph = el("span", "tip-glyph");
+        glyph.appendChild(icon(TIP_ICONS[label] || "play"));
+        head.append(glyph, el("h4", null, label));
         card.append(head, el("p", null, text));
         stack.appendChild(card);
     }
@@ -502,10 +608,12 @@ function renderTeam(listId, members, version) {
     }
 }
 
-function extraCard(title, content, glyph, colorClass) {
+function extraCard(title, content, iconName, colorClass) {
     const card = el("div", "extra-card");
     const head = el("div", "extra-head");
-    head.appendChild(el("span", "extra-glyph " + (colorClass || "g-gold"), glyph || "▸"));
+    const glyph = el("span", "extra-glyph " + (colorClass || "g-gold"));
+    glyph.appendChild(icon(iconName || "star"));
+    head.appendChild(glyph);
     head.appendChild(el("h4", null, title));
     card.appendChild(head);
     if (Array.isArray(content)) {
@@ -546,21 +654,21 @@ async function renderDashboard(data) {
     const extraCards = document.getElementById("extra-cards");
     extraCards.replaceChildren();
     const cards = [
-        ["Jungle threat", extras.jungleThreat, "◈", "g-red", false],
-        ["Best recall timing", extras.recallTiming, "↺", "g-gold", false],
-        ["First 10 minutes", extras.first10Min, "◔", "g-blue", false],
-        ["Who to avoid", extras.avoidTarget, "✕", "g-red", false],
-        ["Itemization warnings", extras.itemWarnings, "!", "g-gold", true],
+        ["Jungle threat", extras.jungleThreat, "eye", "g-red", false],
+        ["Best recall timing", extras.recallTiming, "recall", "g-gold", false],
+        ["First 10 minutes", extras.first10Min, "clock", "g-blue", false],
+        ["Who to avoid", extras.avoidTarget, "x", "g-red", false],
+        ["Itemization warnings", extras.itemWarnings, "alert", "g-gold", true],
     ];
-    for (const [title, content, glyph, color, span] of cards) {
+    for (const [title, content, iconName, color, span] of cards) {
         if (content && (!Array.isArray(content) || content.length)) {
-            const card = extraCard(title, content, glyph, color);
+            const card = extraCard(title, content, iconName, color);
             if (span) card.classList.add("span-all");
             extraCards.appendChild(card);
         }
     }
     if (advice.extraTips && advice.extraTips.length) {
-        const tipsCard = extraCard("Quick tips", advice.extraTips, "★", "g-green");
+        const tipsCard = extraCard("Quick tips", advice.extraTips, "zap", "g-green");
         tipsCard.classList.add("span-all");
         extraCards.appendChild(tipsCard);
     }
@@ -579,6 +687,16 @@ async function renderDashboard(data) {
     }
 
     dashboard.classList.remove("hidden");
+
+    // Two frames after reveal: transitions only run once the element is
+    // rendered, so this makes the difficulty arc sweep up from zero.
+    requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+            const ring = document.getElementById("diff-ring");
+            if (ring.dataset.difficulty) ring.classList.add(ring.dataset.difficulty);
+        })
+    );
+
     dashboard.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -615,3 +733,23 @@ document.getElementById("override-btn").addEventListener("click", () => {
         manualLane: lane || null,
     });
 });
+
+// Saved-profile controls.
+document.getElementById("find-my-matchup").addEventListener("click", () => {
+    const profile = loadProfile();
+    if (!profile) {
+        renderProfileArea(true);
+        return;
+    }
+    analyze({
+        gameName: profile.gameName,
+        tagLine: profile.tagLine,
+        platform: profile.platform || "na1",
+    });
+});
+
+document.getElementById("profile-change").addEventListener("click", () => renderProfileArea(true));
+document.getElementById("profile-clear").addEventListener("click", clearProfile);
+
+// Restore the saved player on page load.
+renderProfileArea();
