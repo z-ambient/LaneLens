@@ -1,5 +1,7 @@
 # LaneLens
 
+![tests](https://github.com/z-ambient/LaneLens/actions/workflows/test.yml/badge.svg)
+
 **Win lane. Play smarter. Know the matchup.**
 
 LaneLens is a League of Legends live-matchup assistant. Enter your Riot ID while

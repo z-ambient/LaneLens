@@ -1,0 +1,27 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # No RIOT_API_KEY / OPENAI_API_KEY on purpose: the suite is fully
+      # hermetic (Riot and OpenAI are mocked, Data Dragon has a bundled
+      # fallback), which this run also proves on every push.
+      - name: Run tests
+        run: python -m pytest -q
