@@ -470,11 +470,15 @@ let enhanceToken = 0;
 
 // Each AI section refines its own panels: they glow while that section is
 // in flight and settle the moment its response lands.
+// glow: elements ringed while in flight. swap: PERSISTENT containers to
+// animate on re-render (tiles are recreated, so their parent animates).
+// animateHeight: the build panel is content-sized, so its height change
+// glides instead of snapping; every other panel is fixed-height.
 const AI_SECTIONS = {
-    build: { glow: [".build"], badge: null },
-    lane: { glow: [".main-card"], badge: null },
-    gameplan: { glow: [".featured"], badge: ".featured .ai-status" },
-    extras: { glow: [".extras", "#stat-tiles .tile"], badge: ".extras .ai-status" },
+    build: { glow: [".build"], swap: [".build"], badge: null, animateHeight: true },
+    lane: { glow: [".main-card"], swap: [".main-card"], badge: null },
+    gameplan: { glow: [".featured"], swap: [".featured", "#stat-tiles"], badge: ".featured .ai-status" },
+    extras: { glow: [".extras", "#stat-tiles .tile"], swap: [".extras", "#stat-tiles"], badge: ".extras .ai-status" },
 };
 
 // What to re-render when a section's delta arrives.
@@ -493,6 +497,39 @@ const SECTION_RENDER = {
         renderExtraCards(advice);
     },
 };
+
+// Re-render a section with a soft content fade. Most panels are fixed
+// height so nothing shifts; content-sized panels (the build) glide
+// smoothly from their old height to the new one.
+function smoothUpdate(selectors, renderFn, animateHeight) {
+    const panels = selectors.flatMap((selector) => [...document.querySelectorAll(selector)]);
+    const oldHeights = animateHeight ? panels.map((panel) => panel.offsetHeight) : null;
+
+    renderFn();
+
+    panels.forEach((panel, index) => {
+        panel.classList.remove("ai-refresh");
+        void panel.offsetWidth; // restart the fade animation
+        panel.classList.add("ai-refresh");
+        setTimeout(() => panel.classList.remove("ai-refresh"), 450);
+
+        if (!animateHeight) return;
+        const newHeight = panel.offsetHeight;
+        if (Math.abs(newHeight - oldHeights[index]) > 2) {
+            panel.style.height = oldHeights[index] + "px";
+            panel.style.overflow = "hidden";
+            panel.style.transition = "height 0.35s ease";
+            requestAnimationFrame(() => {
+                panel.style.height = newHeight + "px";
+                setTimeout(() => {
+                    panel.style.height = "";
+                    panel.style.overflow = "";
+                    panel.style.transition = "";
+                }, 380);
+            });
+        }
+    });
+}
 
 function setSectionState(section, state) {
     const spec = AI_SECTIONS[section];
@@ -565,7 +602,11 @@ async function enhanceAdvice(data) {
                     }
                     const items = await loadItemIndex(data.ddragonVersion);
                     if (token !== enhanceToken) return;
-                    SECTION_RENDER[section](data.advice, items, data.ddragonVersion);
+                    smoothUpdate(
+                        AI_SECTIONS[section].swap,
+                        () => SECTION_RENDER[section](data.advice, items, data.ddragonVersion),
+                        AI_SECTIONS[section].animateHeight
+                    );
                     anyEnhanced = true;
                     if (result.cached) anyCached = true;
                     setSectionState(section, "done");
@@ -897,7 +938,9 @@ function flowStep(slot, items, version) {
     step.appendChild(icons);
     step.appendChild(el("span", "flow-name", purchase.filter(Boolean).join(" + ") || "—"));
 
-    const options = (slot.options || []).filter(Boolean);
+    // Show at most two alternatives per step so the flow's height stays
+    // predictable inside the fixed, unscrolled build panel.
+    const options = (slot.options || []).filter(Boolean).slice(0, 2);
     if (options.length) {
         const optionRow = el("div", "flow-options");
         optionRow.appendChild(el("span", "or", "or"));
