@@ -196,11 +196,10 @@ def analyze_matchup(request: Request, body: AnalyzeRequest):
     platform = body.platform.strip().lower() or DEFAULT_PLATFORM
     region = (body.region or REGION_BY_PLATFORM.get(platform, "americas")).strip().lower()
 
+    # Deliberately vague to visitors; /api/health's riotKeyConfigured and the
+    # server log carry the real diagnosis.
     if not riot_key_present():
-        return error_response(
-            503,
-            "Server is missing its Riot API key. Add RIOT_API_KEY to the backend .env file and restart.",
-        )
+        return error_response(503, "Live game lookups are temporarily unavailable.")
 
     client = RiotClient()
     try:
@@ -338,7 +337,7 @@ def get_matchup_history(request: Request, body: HistoryRequest):
     on disk) and returns e.g. 3W-1L as Malphite vs Sett.
     """
     if not riot_key_present():
-        return error_response(503, "Server is missing its Riot API key.")
+        return error_response(503, "Match history is temporarily unavailable.")
 
     region = (body.region or REGION_BY_PLATFORM.get(body.platform.lower(), "americas")).lower()
     record = matchup_history.get_matchup_record(

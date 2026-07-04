@@ -8,14 +8,23 @@ The API key is sent only from this backend via the X-Riot-Token header and is
 never logged or returned to the browser.
 """
 
+import logging
+
 import requests
 from requests.utils import quote
 
 from app.config import RIOT_API_KEY
 
+logger = logging.getLogger("uvicorn.error")
+
 
 class RiotApiError(Exception):
-    """Raised for unexpected Riot API failures (auth, rate limit, 5xx)."""
+    """Raised for unexpected Riot API failures (auth, rate limit, 5xx).
+
+    The message is shown to end users, so it never names the real cause
+    (key state, upstream status) - that detail goes to the server log,
+    where /api/health's riotKeyConfigured also helps diagnose.
+    """
 
     def __init__(self, status_code, message):
         super().__init__(message)
@@ -25,14 +34,16 @@ class RiotApiError(Exception):
 
 class MissingApiKeyError(RiotApiError):
     def __init__(self):
-        super().__init__(503, "Riot API key is not configured on the server.")
+        super().__init__(503, "Live game lookups are temporarily unavailable.")
 
 
 def _classify_error(status_code):
     if status_code in (401, 403):
-        return RiotApiError(502, "Riot API key is invalid or expired.")
+        logger.warning("Riot API rejected our key (HTTP %d) - expired?", status_code)
+        return RiotApiError(502, "Could not fetch live game data right now.")
     if status_code == 429:
         return RiotApiError(429, "Riot API rate limit exceeded. Try again in a minute.")
+    logger.warning("Unexpected Riot API response: HTTP %d", status_code)
     return RiotApiError(502, "Unexpected error from the Riot API.")
 
 

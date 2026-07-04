@@ -97,7 +97,10 @@ def test_missing_api_key(monkeypatch):
     monkeypatch.setattr(main_module, "riot_key_present", lambda: False)
     response = client.post("/api/analyze-matchup", json=BODY)
     assert response.status_code == 503
-    assert "RIOT_API_KEY" in response.json()["error"]
+    # The message must not tell strangers how the backend is (mis)configured.
+    error = response.json()["error"]
+    assert "RIOT_API_KEY" not in error and "key" not in error.lower()
+    assert "unavailable" in error
 
 
 def test_account_not_found(riot):
