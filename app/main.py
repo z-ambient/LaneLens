@@ -57,6 +57,39 @@ def validation_handler(request: Request, exc: RequestValidationError):
     )
 
 
+# Content-Security-Policy: a whitelist of everything the frontend legitimately
+# loads, so an injected script/style from anywhere else is dead on arrival.
+# The external hosts mirror frontend/app.js and styles.css exactly:
+#   - ddragon.leagueoflegends.com: champion/item/rune images AND a direct
+#     fetch of item.json (hence connect-src, not just img-src)
+#   - cdn.discordapp.com: account avatars
+#   - fonts.googleapis.com / fonts.gstatic.com: the Cinzel @import + its files
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' https://ddragon.leagueoflegends.com https://cdn.discordapp.com",
+    "connect-src 'self' https://ddragon.leagueoflegends.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+])
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    headers = response.headers
+    headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
+    # Legacy twin of frame-ancestors, for anything old enough to ignore CSP.
+    headers.setdefault("X-Frame-Options", "DENY")
+    headers.setdefault("X-Content-Type-Options", "nosniff")
+    headers.setdefault("Referrer-Policy", "same-origin")
+    return response
+
+
 # Reject oversized bodies before any handler parses them or forwards them to a
 # paid LLM call. Legitimate enhance payloads are a few KB; 64 KB is generous.
 MAX_BODY_BYTES = 64 * 1024
