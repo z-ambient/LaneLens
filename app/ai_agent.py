@@ -14,7 +14,7 @@ Two modes:
 
 import json
 
-from app.config import OPENAI_API_KEY
+from app.config import AI_MODEL_FAST, AI_MODEL_PRIMARY, OPENAI_API_KEY
 
 # Per-section field groups. build/lane are matchup-specific (cacheable);
 # gameplan/extras depend on the actual teams, so they run fresh every game.
@@ -76,17 +76,23 @@ _INSTRUCTIONS = (
 )
 
 
-def _call_openai(instructions, payload, timeout=30):
+def _call_openai(instructions, payload, model, timeout=30):
     from openai import OpenAI
 
     client = OpenAI(api_key=OPENAI_API_KEY, timeout=timeout)
     response = client.responses.create(
-        model="gpt-5.5",
+        model=model,
         reasoning={"effort": "low"},
         instructions=instructions,
         input=json.dumps(payload),
     )
     return response.output_text
+
+
+def _model_for_section(section):
+    """Cacheable sections get the flagship (the answer is a shared, permanent
+    asset); per-game sections get the fast model (ephemeral, one viewer)."""
+    return AI_MODEL_PRIMARY if section in CACHEABLE_SECTIONS else AI_MODEL_FAST
 
 
 def refine_advice_with_ai(context, base_advice):
@@ -98,6 +104,7 @@ def refine_advice_with_ai(context, base_advice):
         raw = _call_openai(
             _INSTRUCTIONS,
             {"matchContext": context, "baselineAdvice": base_advice},
+            AI_MODEL_PRIMARY,
         )
         return _parse_and_merge(raw, base_advice)
     except Exception:
@@ -137,6 +144,7 @@ def refine_section(context, base_advice, section):
         raw = _call_openai(
             _section_instructions(section),
             {"matchContext": context, "baselineAdvice": base_advice},
+            _model_for_section(section),
         )
         return _parse_section(raw, section)
     except Exception:

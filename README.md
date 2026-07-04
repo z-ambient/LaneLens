@@ -40,11 +40,19 @@ evolved from the original [LaneLens-Manual](https://github.com/z-ambient/LaneLen
    patch changes, so repeat matchups get them in milliseconds;
    team-dependent sections (game plan, extras) run fresh for every game's
    actual comps. Measured: old single call 30-60s; per-section, cached
-   panels land instantly and the slowest fresh section ~10s. Both this cache and the matchup history live in a
+   panels land instantly and the slowest fresh section ~10s.
+8. **Two-tier AI models** — the cacheable sections use the flagship model
+   (`gpt-5.5` by default): each answer is generated once per matchup per
+   patch and then served to every user, so quality compounds while the cost
+   amortizes to nothing. The per-game sections use a fast mini model
+   (`gpt-5.4-mini` by default): ~7x cheaper on the recurring cost — a game
+   on a cached matchup costs ~half a cent of AI — and about twice as fast
+   (~5s). Override with `AI_MODEL_PRIMARY` / `AI_MODEL_FAST` env vars, no
+   code changes needed. Both this cache and the matchup history live in a
    database: a zero-config SQLite file locally, or Postgres in production
    via `DATABASE_URL` (legacy JSON stores are imported automatically on
    first run).
-8. **Auto-detect and matchup history** — with a saved player and Auto-detect
+9. **Auto-detect and matchup history** — with a saved player and Auto-detect
    on, the frontend quietly polls every 30s and brings up the dashboard the
    moment a live game appears (pauses while the tab is hidden; backs off on
    rate limits). The overview also shows your real win/loss record in the

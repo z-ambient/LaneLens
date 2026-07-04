@@ -18,6 +18,13 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
 
+# AI models. PRIMARY answers the cacheable matchup sections (build, lane) -
+# generated once per matchup per patch and reused by everyone, so quality
+# compounds. FAST answers the per-game sections (gameplan, extras) that run
+# fresh on every analysis - this is where recurring cost lives.
+AI_MODEL_PRIMARY = os.getenv("AI_MODEL_PRIMARY", "gpt-5.5")
+AI_MODEL_FAST = os.getenv("AI_MODEL_FAST", "gpt-5.4-mini")
+
 DEFAULT_PLATFORM = os.getenv("DEFAULT_PLATFORM", "na1")
 DEFAULT_REGION = os.getenv("DEFAULT_REGION", "americas")
 
