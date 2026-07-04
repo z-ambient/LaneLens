@@ -57,8 +57,8 @@ evolved from the original [LaneLens-Manual](https://github.com/z-ambient/LaneLen
    moment a live game appears (pauses while the tab is hidden; backs off on
    rate limits). The overview also shows your real win/loss record in the
    current matchup, built from Match-v5: each analysis processes only games
-   it has never seen before (stored in `data/matchup_history.json`,
-   gitignored), pairing you with the enemy in your `teamPosition` on
+   it has never seen before (stored in the database alongside the advice
+   cache), pairing you with the enemy in your `teamPosition` on
    Summoner's Rift queues and skipping remakes.
 
 ## Setup
@@ -187,6 +187,62 @@ storage, so deploying is configuration only:
 Riot dev keys expire daily; for an always-on deployment use a **Personal
 API Key** (developer.riotgames.com → Register Product).
 
+## Security
+
+The app is built to be exposed to the internet unauthenticated, so every
+route treats its input as hostile. A full audit hardened the following
+(each item shipped with regression tests and was verified against the
+running server):
+
+**Untrusted input**
+
+- **Strict request models** — every field has a length cap, team lists are
+  bounded, and request bodies over 64 KB are rejected with `413` before any
+  handler (or paid AI call) sees them. Validation failures return a generic
+  `400` that never echoes the rejected payload.
+- **PUUID validation** — `/api/matchup-history` only accepts exactly
+  78 URL-safe base64 chars (the real Riot shape), so junk can't reach the
+  Riot API request path or the database primary key. Players Riot has no
+  games for never create a database row.
+- **AI cache poisoning** — cached AI advice is served to every user, so
+  nothing client-controlled influences a cacheable AI call: champions and
+  lane are validated against the real champion list and the baseline advice
+  is rebuilt server-side. AI output strings are also length-capped at parse
+  time before they enter the shared cache.
+
+**Rate limiting** (per client IP, spoof-resistant)
+
+- The limit key reads the **rightmost** `X-Forwarded-For` entry — the one
+  appended by the trusted proxy — flattened across multiple headers, so a
+  client prepending fake entries can't mint fresh buckets
+  (`TRUSTED_PROXY_HOPS`, default 1, matches Railway; set 0 when exposed
+  directly). Per-route budgets match cost: `/api/matchup-history` 5/min
+  (up to 11 Riot calls per hit), analyze/enhance 20/min, auth routes
+  10/min, `/api/me` 30/min.
+
+**Sessions & authentication**
+
+- Discord OAuth with `identify` scope only, CSRF-checked `state`, and
+  HttpOnly/SameSite session cookies.
+- Session tokens are stored **sha256-hashed** — a leaked database or backup
+  contains no usable credentials. Startup purges expired rows and any
+  legacy plaintext rows.
+
+**Defense in depth**
+
+- Every response carries a **Content-Security-Policy** whitelisting exactly
+  what the frontend uses (self, Data Dragon images + item.json fetch,
+  Discord avatars, the Google font), plus `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, and `Referrer-Policy: same-origin`.
+- **Pinned dependencies** — `requirements.txt` pins exact versions so
+  local, CI, and the production image install identical code; Dependabot
+  opens weekly update PRs and a `pip-audit` step fails CI on any known CVE.
+- The **container runs as a non-root user**; code is read-only to the
+  runtime.
+- Error messages never reveal backend configuration (key state goes to the
+  server log; `/api/health` reports `riotKeyConfigured` for diagnosis), and
+  the Riot API key never leaves the backend.
+
 ## Manual testing checklist
 
 1. **Demo match** — click *Use Demo Match* with no `.env` at all; the full
@@ -200,7 +256,8 @@ API Key** (developer.riotgames.com → Register Product).
    use a real queue), then analyze during loading/early game; dashboard shows
    your champion, both teams, and the inferred lane opponent.
 6. **Missing API key** — remove `RIOT_API_KEY` from `.env`, restart, analyze;
-   a backend setup error appears (no secrets shown).
+   a generic "temporarily unavailable" error appears (no configuration
+   details shown; `/api/health` and the server log carry the diagnosis).
 7. **Rate limit / Riot errors** — spam analyze ~25 times in 20s on a dev key;
    a rate-limit message with retry advice appears, and the demo match still works.
 
@@ -211,11 +268,17 @@ LaneLens/
 ├── app/
 │   ├── main.py            # FastAPI app + POST /api/analyze-matchup
 │   ├── config.py          # env loading, platform->region routing map
+│   ├── rate_limit.py      # per-IP limiter + spoof-resistant client-IP key
 │   ├── riot_client.py     # Riot Account-v1 + Spectator-v5 (key stays here)
 │   ├── champions.py       # Data Dragon mapping (latest ver + offline fallback)
 │   ├── lane_detection.py  # Smite + role preferences -> lane/opponent inference
 │   ├── advice_engine.py   # deterministic structured advice + team notes
 │   ├── ai_agent.py        # optional OpenAI refinement (falls back cleanly)
+│   ├── advice_cache.py    # per-matchup AI advice cache (DB-backed)
+│   ├── matchup_history.py # personal W/L record from Match-v5 (DB-backed)
+│   ├── storage.py         # SQLite/Postgres layer (sessions hashed at rest)
+│   ├── auth.py            # Discord OAuth login + account profile routes
+│   ├── prewarm.py         # cache pre-warming CLI
 │   └── demo.py            # demo match payload
 ├── data/
 │   ├── matchups.json            # curated matchup knowledge (from LaneLens-Manual)
