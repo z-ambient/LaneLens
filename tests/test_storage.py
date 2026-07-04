@@ -64,6 +64,19 @@ def test_legacy_plaintext_sessions_purged(tmp_path):
     assert storage.session_get_user(raw, now=1_000_000_000) is None
 
 
+def test_expired_sessions_purged_at_startup(tmp_path):
+    """Expired rows nobody presents again must not sit in the table forever."""
+    storage.user_upsert("42", "TestSummoner", None)
+    storage.session_create("long-gone", "42", expires_at=1)          # expired
+    storage.session_create("still-good", "42", expires_at=2_000_000_000)
+
+    storage.configure("sqlite:///" + str(tmp_path / "test.db"))  # same DB as fixture
+
+    stored = _stored_session_tokens()
+    assert hashlib.sha256(b"long-gone").hexdigest() not in stored
+    assert hashlib.sha256(b"still-good").hexdigest() in stored
+
+
 def test_legacy_json_import(tmp_path, monkeypatch):
     """First run against an empty DB imports the old JSON stores."""
     data_dir = tmp_path / "data"

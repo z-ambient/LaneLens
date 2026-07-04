@@ -14,6 +14,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 
 from sqlalchemy import BigInteger, Column, String, Text, create_engine, delete, func, select
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -77,7 +78,7 @@ def configure(url=None):
     Base.metadata.create_all(_engine)
     _session_factory = sessionmaker(bind=_engine, future=True)
 
-    _purge_plaintext_sessions()
+    _purge_stale_sessions()
 
     if not explicit:
         _import_legacy_json()
@@ -174,18 +175,24 @@ def _token_hash(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def _purge_plaintext_sessions():
-    """One-time cleanup for databases created before tokens were hashed:
-    raw tokens are 43 chars (token_urlsafe), hashes are exactly 64, so any
-    non-64-char row is a legacy plaintext credential and must go. Idempotent -
-    a no-op on every start after the first."""
+def _purge_stale_sessions():
+    """Startup cleanup of session rows that must not linger.
+
+    Plaintext legacy rows: raw tokens are 43 chars (token_urlsafe), hashes
+    are exactly 64, so any non-64-char row predates hashing and is a live
+    credential in the clear. Expired rows: normally deleted on their next
+    lookup, but a session nobody presents again would otherwise sit in the
+    table forever. Both idempotent."""
     with _session() as session:
         result = session.execute(
-            delete(SessionRow).where(func.length(SessionRow.token) != 64)
+            delete(SessionRow).where(
+                (func.length(SessionRow.token) != 64)
+                | (SessionRow.expires_at < int(time.time()))
+            )
         )
         session.commit()
         if result.rowcount:
-            logger.info("Purged %d legacy plaintext session tokens", result.rowcount)
+            logger.info("Purged %d stale session rows", result.rowcount)
 
 
 def session_create(token, user_id, expires_at):
