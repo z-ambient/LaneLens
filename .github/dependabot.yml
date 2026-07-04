@@ -1,0 +1,14 @@
+# Opens a PR whenever a pinned dependency has an update or a known
+# vulnerability, so the pins in requirements.txt can't quietly rot.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
