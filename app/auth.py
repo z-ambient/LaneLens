@@ -19,7 +19,7 @@ from urllib.parse import urlencode
 import requests
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app import storage
 from app.config import DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET
@@ -165,9 +165,11 @@ def me(request: Request):
 
 
 class ProfileBody(BaseModel):
-    gameName: str
-    tagLine: str
-    platform: str = "na1"
+    # Bounded to the users-table column widths so an oversized value is a clean
+    # 400, not a database error at write time.
+    gameName: str = Field(max_length=40)
+    tagLine: str = Field(max_length=16)
+    platform: str = Field("na1", max_length=8)
 
 
 @router.post("/api/me/profile")

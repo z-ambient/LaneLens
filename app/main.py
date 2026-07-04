@@ -9,12 +9,13 @@ leaves this backend.
 """
 
 import os
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -76,6 +77,43 @@ def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         content={"ok": False, "error": "Too many requests. Wait a minute, then try again."},
     )
 
+
+@app.exception_handler(RequestValidationError)
+def validation_handler(request: Request, exc: RequestValidationError):
+    # Keep the app's {ok, error} shape and, importantly, don't echo back the
+    # rejected payload the way Pydantic's default 422 body does.
+    return JSONResponse(
+        status_code=400,
+        content={"ok": False, "error": "Invalid request."},
+    )
+
+
+# Reject oversized bodies before any handler parses them or forwards them to a
+# paid LLM call. Legitimate enhance payloads are a few KB; 64 KB is generous.
+MAX_BODY_BYTES = 64 * 1024
+
+
+@app.middleware("http")
+async def limit_body_size(request: Request, call_next):
+    length = request.headers.get("content-length")
+    if length is not None:
+        try:
+            too_big = int(length) > MAX_BODY_BYTES
+        except ValueError:
+            return JSONResponse(
+                status_code=400, content={"ok": False, "error": "Invalid request."}
+            )
+        if too_big:
+            return JSONResponse(
+                status_code=413, content={"ok": False, "error": "Request body too large."}
+            )
+    return await call_next(request)
+
+
+# Champion display names top out around 14 chars ("Nunu & Willump"); 40 leaves
+# room while rejecting anything pathological before it reaches the LLM.
+ChampionName = Annotated[str, StringConstraints(max_length=40)]
+
 QUEUE_NAMES = {
     400: "Normal Draft",
     420: "Ranked Solo/Duo",
@@ -103,13 +141,13 @@ SUMMONER_SPELLS = {
 
 
 class AnalyzeRequest(BaseModel):
-    gameName: str = ""
-    tagLine: str = ""
-    platform: str = DEFAULT_PLATFORM
-    region: Optional[str] = None
+    gameName: str = Field("", max_length=40)
+    tagLine: str = Field("", max_length=16)
+    platform: str = Field(DEFAULT_PLATFORM, max_length=8)
+    region: Optional[str] = Field(None, max_length=16)
     # Manual override when auto lane detection is wrong or unavailable.
-    manualEnemyChampion: Optional[str] = None
-    manualLane: Optional[str] = None
+    manualEnemyChampion: Optional[str] = Field(None, max_length=40)
+    manualLane: Optional[str] = Field(None, max_length=16)
 
 
 def error_response(status_code, message):
@@ -277,11 +315,12 @@ def analyze_matchup(request: Request, body: AnalyzeRequest):
 
 
 class HistoryRequest(BaseModel):
-    puuid: str
-    platform: str = DEFAULT_PLATFORM
-    region: Optional[str] = None
-    myChampion: str
-    enemyChampion: str
+    # Riot PUUIDs are 78 chars; cap at the storage column width (128).
+    puuid: str = Field(max_length=128)
+    platform: str = Field(DEFAULT_PLATFORM, max_length=8)
+    region: Optional[str] = Field(None, max_length=16)
+    myChampion: ChampionName
+    enemyChampion: ChampionName
 
 
 @app.post("/api/matchup-history")
@@ -305,16 +344,19 @@ def get_matchup_history(request: Request, body: HistoryRequest):
 
 
 class EnhanceRequest(BaseModel):
-    myChampion: str
-    enemyChampion: Optional[str] = None
-    lane: Optional[str] = None
-    myTeam: List[str] = []
-    enemyTeam: List[str] = []
-    queue: Optional[str] = None
+    myChampion: ChampionName
+    enemyChampion: Optional[ChampionName] = None
+    lane: Optional[str] = Field(None, max_length=16)
+    # A Rift team is 5; 10 leaves headroom for other modes without letting a
+    # client push a huge list (the handler further validates and caps at 5).
+    myTeam: List[ChampionName] = Field(default_factory=list, max_length=10)
+    enemyTeam: List[ChampionName] = Field(default_factory=list, max_length=10)
+    queue: Optional[str] = Field(None, max_length=32)
+    # advice/selectedRunes are free-form dicts; the body-size limit bounds them.
     selectedRunes: Optional[dict] = None
     advice: dict
     # One of app.ai_agent.SECTION_SPECS; omitted = legacy full refinement.
-    section: Optional[str] = None
+    section: Optional[str] = Field(None, max_length=32)
 
 
 def _team_records(names, fallback_champ):
