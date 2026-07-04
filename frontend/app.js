@@ -22,6 +22,57 @@ const LOADING_STEPS = [
 let loadingTimer = null;
 let lastRequestBody = null;
 
+// ---------- Home / results mode ----------
+
+// Splash art rotated on the landing hero (Data Dragon, no key needed).
+const HOME_SPLASHES = [
+    "Ahri", "Jinx", "Yasuo", "Leona", "Lux", "Yone", "Sett", "Riven",
+    "Akali", "Malphite", "Kaisa", "LeeSin",
+];
+
+function goHome() {
+    document.getElementById("loading").classList.add("hidden");
+    errorPanel.classList.add("hidden");
+    document.getElementById("no-game").classList.add("hidden");
+    dashboard.classList.add("hidden");
+
+    const splash = document.getElementById("home-splash");
+    const pick = HOME_SPLASHES[Math.floor(Math.random() * HOME_SPLASHES.length)];
+    splash.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${pick}_0.jpg`;
+
+    // The search controls live in the hero on the home screen, and the
+    // status panels (loading / error / no-game) show above them there.
+    document.getElementById("hero-status").append(
+        document.getElementById("loading"),
+        errorPanel,
+        document.getElementById("no-game")
+    );
+    document.getElementById("hero-search").append(
+        document.getElementById("profile-area"),
+        document.getElementById("analyze-form"),
+        demoBtn
+    );
+    document.body.classList.add("is-home");
+    document.getElementById("home").classList.remove("hidden");
+    window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function leaveHome() {
+    if (!document.body.classList.contains("is-home")) return;
+    document.getElementById("home").classList.add("hidden");
+    document.body.classList.remove("is-home");
+
+    // Controls return to the top bar, status panels to the results column.
+    document.querySelector(".topbar").append(
+        document.getElementById("profile-area"),
+        document.getElementById("analyze-form"),
+        demoBtn
+    );
+    dashboard.parentNode.insertBefore(document.getElementById("loading"), dashboard);
+    dashboard.parentNode.insertBefore(errorPanel, dashboard);
+    dashboard.parentNode.insertBefore(document.getElementById("no-game"), dashboard);
+}
+
 // ---------- Saved player profile (browser localStorage) ----------
 
 const PROFILE_KEY = "lanelens.profile";
@@ -88,6 +139,8 @@ function setBusy(busy) {
 }
 
 function startLoading() {
+    // Stay on the home screen while loading: errors and "no live game"
+    // display there, above the search card. Success leaves via renderDashboard.
     let step = 0;
     enhanceToken++; // invalidate any in-flight AI enhancement
     setAiStatus(null);
@@ -947,6 +1000,7 @@ function setSourceNote(data, aiState) {
 }
 
 async function renderDashboard(data) {
+    leaveHome(); // auto-detect can land here without a loading phase
     errorPanel.classList.add("hidden");
 
     const items = await loadItemIndex(data.ddragonVersion);
@@ -1048,6 +1102,9 @@ document.addEventListener("visibilitychange", () => {
     if (!document.hidden && watchTimer) watchTick();
 });
 
-// Restore the saved player on page load.
+document.getElementById("brand-home").addEventListener("click", goHome);
+
+// Restore the saved player on page load and start on the home screen.
 renderProfileArea();
 syncWatch();
+goHome();

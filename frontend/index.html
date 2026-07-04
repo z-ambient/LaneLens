@@ -30,7 +30,7 @@
     <div class="shell">
         <!-- Top bar: brand + analyze form -->
         <header class="topbar">
-            <span class="brand">Lane<span>Lens</span></span>
+            <button type="button" id="brand-home" class="brand" title="Back to home">Lane<span>Lens</span></button>
 
             <!-- Shown when a player is saved: one-click analyze -->
             <div id="profile-area" class="profile-area hidden">
@@ -71,7 +71,42 @@
         </header>
 
         <main>
-            <p class="tagline">Win lane. Play smarter. Know the matchup.</p>
+            <!-- Home / landing hero -->
+            <section id="home" class="home">
+                <img id="home-splash" class="home-splash" alt="">
+                <div class="home-inner">
+                    <span class="home-emblem" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <circle cx="12" cy="12" r="6"></circle>
+                            <circle cx="12" cy="12" r="2"></circle>
+                        </svg>
+                    </span>
+                    <h2 class="home-title">Lane<span>Lens</span></h2>
+                    <p class="home-tagline">Win lane. Play smarter. Know the matchup.</p>
+                    <p class="home-desc">
+                        LaneLens reads your live League of Legends game the moment you load in —
+                        your lane matchup, a full build with runes, and an AI-refined game plan,
+                        all readable before minions spawn.
+                    </p>
+                    <div class="home-features">
+                        <span class="home-feature">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            Live game analysis
+                        </span>
+                        <span class="home-feature">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            AI game plan &amp; build
+                        </span>
+                        <span class="home-feature">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            Your matchup history
+                        </span>
+                    </div>
+                    <div id="hero-status" class="hero-status"></div>
+                    <div id="hero-search" class="hero-search"></div>
+                </div>
+            </section>
 
             <!-- Loading -->
             <section id="loading" class="panel loading-panel hidden" aria-live="polite">
