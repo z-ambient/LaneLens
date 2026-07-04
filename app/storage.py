@@ -10,11 +10,12 @@ On first run against an empty database, any legacy JSON stores
 accumulated so far is lost.
 """
 
+import hashlib
 import json
 import logging
 import os
 
-from sqlalchemy import BigInteger, Column, String, Text, create_engine, select
+from sqlalchemy import BigInteger, Column, String, Text, create_engine, delete, func, select
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 logger = logging.getLogger("uvicorn.error")
@@ -50,6 +51,8 @@ class UserRow(Base):
 
 class SessionRow(Base):
     __tablename__ = "sessions"
+    # sha256 hex of the session token, never the token itself: a leaked
+    # database or backup must not contain usable credentials.
     token = Column(String(64), primary_key=True)
     user_id = Column(String(32), nullable=False)
     expires_at = Column(BigInteger, nullable=False)  # epoch seconds
@@ -73,6 +76,8 @@ def configure(url=None):
     _engine = create_engine(url, future=True)
     Base.metadata.create_all(_engine)
     _session_factory = sessionmaker(bind=_engine, future=True)
+
+    _purge_plaintext_sessions()
 
     if not explicit:
         _import_legacy_json()
@@ -165,9 +170,27 @@ def user_set_riot_profile(user_id, game_name, tag_line, platform):
         return True
 
 
+def _token_hash(token):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _purge_plaintext_sessions():
+    """One-time cleanup for databases created before tokens were hashed:
+    raw tokens are 43 chars (token_urlsafe), hashes are exactly 64, so any
+    non-64-char row is a legacy plaintext credential and must go. Idempotent -
+    a no-op on every start after the first."""
+    with _session() as session:
+        result = session.execute(
+            delete(SessionRow).where(func.length(SessionRow.token) != 64)
+        )
+        session.commit()
+        if result.rowcount:
+            logger.info("Purged %d legacy plaintext session tokens", result.rowcount)
+
+
 def session_create(token, user_id, expires_at):
     with _session() as session:
-        session.merge(SessionRow(token=token, user_id=user_id, expires_at=expires_at))
+        session.merge(SessionRow(token=_token_hash(token), user_id=user_id, expires_at=expires_at))
         session.commit()
 
 
@@ -176,7 +199,7 @@ def session_get_user(token, now):
     if not token:
         return None
     with _session() as session:
-        row = session.get(SessionRow, token)
+        row = session.get(SessionRow, _token_hash(token))
         if row is None:
             return None
         if row.expires_at < now:
@@ -201,8 +224,10 @@ def history_all_games():
 
 
 def session_delete(token):
+    if not token:
+        return
     with _session() as session:
-        row = session.get(SessionRow, token)
+        row = session.get(SessionRow, _token_hash(token))
         if row:
             session.delete(row)
             session.commit()
