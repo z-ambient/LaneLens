@@ -4,10 +4,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.main as main_module
+from app import storage
 from app.main import app
-from app.matchup_history import get_matchup_record
+from app.matchup_history import get_matchup_record, update_history
 
 client = TestClient(app)
+
+# The endpoint only accepts real-shaped PUUIDs: exactly 78 URL-safe chars.
+VALID_PUUID = "x" * 78
 
 
 def _match(match_id, my_champ, enemy_champ, win, queue=420, duration=1800, position="TOP"):
@@ -94,15 +98,50 @@ def test_recent_capped_at_five_newest_first():
 
 
 def test_history_endpoint(monkeypatch):
-    fake = FakeClient({"m1": _match("m1", "Malphite", "Sett", True)})
+    match = _match("m1", "Malphite", "Sett", True)
+    match["info"]["participants"][0]["puuid"] = VALID_PUUID
+    fake = FakeClient({"m1": match})
     monkeypatch.setattr(main_module, "RiotClient", lambda: fake)
     monkeypatch.setattr(main_module, "riot_key_present", lambda: True)
 
     response = client.post("/api/matchup-history", json={
-        "puuid": "me", "platform": "na1",
+        "puuid": VALID_PUUID, "platform": "na1",
         "myChampion": "Malphite", "enemyChampion": "Sett",
     })
     data = response.json()
     assert data["ok"] is True
     assert data["record"]["games"] == 1
     assert data["record"]["wins"] == 1
+
+
+@pytest.mark.parametrize("puuid", [
+    "me",                     # far too short
+    "x" * 77,                 # one char short
+    "x" * 79,                 # one char long
+    "x" * 77 + "!",           # right length, bad charset
+    "../" + "x" * 75,         # path characters must never reach the Riot URL
+])
+def test_history_endpoint_rejects_malformed_puuid(puuid, monkeypatch):
+    monkeypatch.setattr(main_module, "riot_key_present", lambda: True)
+    response = client.post("/api/matchup-history", json={
+        "puuid": puuid, "platform": "na1",
+        "myChampion": "Malphite", "enemyChampion": "Sett",
+    })
+    assert response.status_code == 400
+
+
+def test_unknown_puuid_creates_no_database_row():
+    """Riot returning zero matches for a never-seen player must not write:
+    this route is unauthenticated, so junk PUUIDs must not grow the table."""
+    update_history(FakeClient({}), "never-seen", "americas")
+    assert storage.history_get("never-seen") is None
+
+
+def test_known_player_row_still_written_and_updated():
+    fake = FakeClient({"m1": _match("m1", "Malphite", "Sett", True)})
+    update_history(fake, "me", "americas")
+    assert storage.history_get("me")["processed"] == ["m1"]
+
+    # A later fetch with no new games still updates the existing row.
+    update_history(FakeClient({}), "me", "americas")
+    assert storage.history_get("me")["processed"] == ["m1"]

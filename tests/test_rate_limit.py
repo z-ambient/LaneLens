@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.datastructures import Headers
 
+import app.main as main_module
 import app.rate_limit as rate_limit_module
 from app.config import _trusted_proxy_hops
 from app.main import app
@@ -124,7 +125,7 @@ def test_hops_negative_clamped_to_zero(monkeypatch):
     assert _trusted_proxy_hops() == 0
 
 
-# ---------- Per-route limits on the auth/account endpoints ----------
+# ---------- Per-route limits on the abuse-relevant endpoints ----------
 
 client = TestClient(app, follow_redirects=False)
 
@@ -143,14 +144,21 @@ def rate_limits_on():
     ("GET", "/auth/callback", 10, None),
     ("POST", "/auth/logout", 10, None),
     ("GET", "/api/me", 30, None),
-    # A valid body: requests failing Pydantic validation are rejected before
+    # Valid bodies: requests failing Pydantic validation are rejected before
     # the route (and its limiter) ever runs, so they would never count.
     ("POST", "/api/me/profile", 10, {"gameName": "Me", "tagLine": "NA1"}),
+    ("POST", "/api/matchup-history", 5, {
+        "puuid": "x" * 78, "platform": "na1",
+        "myChampion": "Malphite", "enemyChampion": "Sett",
+    }),
 ])
-def test_auth_routes_rate_limited(rate_limits_on, method, path, per_minute, body):
-    """Every auth/account route must 429 once its per-IP budget is spent.
+def test_routes_rate_limited(rate_limits_on, monkeypatch, method, path, per_minute, body):
+    """Every guarded route must 429 once its per-IP budget is spent.
     Status codes within the budget vary (302 redirect, 401, 503...) - the
     only requirement is that none of them is a 429 until the budget runs out."""
+    # Keep matchup-history offline: without a key it 503s before touching
+    # Riot, which still spends its rate-limit budget.
+    monkeypatch.setattr(main_module, "riot_key_present", lambda: False)
     for i in range(per_minute):
         response = client.request(method, path, json=body)
         assert response.status_code != 429, f"limited too early, request {i + 1}"

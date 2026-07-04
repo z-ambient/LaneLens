@@ -57,10 +57,16 @@ def _extract_lane_matchup(match, puuid):
 
 def update_history(client, puuid, region):
     """Fetch match details we have not processed yet and store their matchups."""
-    entry = storage.history_get(puuid) or {"processed": [], "games": []}
+    stored = storage.history_get(puuid)
+    entry = stored or {"processed": [], "games": []}
     processed = set(entry["processed"])
 
     match_ids = client.get_match_ids(puuid, region, count=30)
+    # A player Riot has nothing for gets no row: this route is
+    # unauthenticated, so a made-up PUUID must not grow the table.
+    if stored is None and not match_ids:
+        return entry
+
     new_ids = [match_id for match_id in match_ids if match_id not in processed]
 
     for match_id in new_ids[:MAX_NEW_DETAILS]:

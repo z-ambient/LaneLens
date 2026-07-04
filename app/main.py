@@ -317,16 +317,20 @@ def analyze_matchup(request: Request, body: AnalyzeRequest):
 
 
 class HistoryRequest(BaseModel):
-    # Riot PUUIDs are 78 chars; cap at the storage column width (128).
-    puuid: str = Field(max_length=128)
+    # A Riot PUUID is exactly 78 URL-safe base64 chars. Anything else never
+    # reaches the Riot API (it's spliced into the request path) or the
+    # database (it's the matchup_history primary key).
+    puuid: str = Field(pattern=r"^[A-Za-z0-9_-]{78}$")
     platform: str = Field(DEFAULT_PLATFORM, max_length=8)
     region: Optional[str] = Field(None, max_length=16)
     myChampion: ChampionName
     enemyChampion: ChampionName
 
 
+# The costliest route per hit (1 id-list + up to 10 match-detail Riot calls),
+# and a real user needs it once per analyzed game - so the tightest limit.
 @app.post("/api/matchup-history")
-@limiter.limit("15/minute")
+@limiter.limit("5/minute")
 def get_matchup_history(request: Request, body: HistoryRequest):
     """Background lookup: the player's real win/loss record in this matchup.
 
