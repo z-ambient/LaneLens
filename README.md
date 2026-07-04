@@ -126,6 +126,27 @@ python -m pytest
 
 All Riot calls are mocked — tests need no network or API key.
 
+## Pre-warming the advice cache
+
+Batch-generate AI advice for common matchups so first-time users hit the
+cache instantly (build + lane sections; ~2 AI calls per matchup):
+
+```bash
+python -m app.prewarm --dry-run          # show the plan, no AI calls
+python -m app.prewarm --limit 25         # warm up to 25 matchups
+python -m app.prewarm --lane Top         # one lane only
+```
+
+Matchups observed in real games (the matchup-history store) are warmed
+first, then a curated meta list in popularity order. Already-cached
+matchups are skipped, so re-running continues down the list; a patch change
+invalidates the cache and re-warming starts over. To warm **production**,
+point the script at its database:
+
+```bash
+DATABASE_URL='postgresql://...' python -m app.prewarm --limit 50
+```
+
 ## Discord login (optional)
 
 "Sign in with Discord" makes the saved Riot profile follow the user across

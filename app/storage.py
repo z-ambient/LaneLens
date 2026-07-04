@@ -187,6 +187,19 @@ def session_get_user(token, now):
         return _user_dict(user) if user else None
 
 
+def history_all_games():
+    """Every stored lane-matchup record across all players (for pre-warming)."""
+    with _session() as session:
+        rows = session.execute(select(HistoryRow.entry_json)).scalars().all()
+    games = []
+    for raw in rows:
+        try:
+            games.extend(json.loads(raw).get("games", []))
+        except ValueError:
+            continue
+    return games
+
+
 def session_delete(token):
     with _session() as session:
         row = session.get(SessionRow, token)
