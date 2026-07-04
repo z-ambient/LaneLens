@@ -2,14 +2,15 @@
 
 Builds a per-player record like "3W-1L as Malphite vs Sett" by walking recent
 Summoner's Rift matches and pairing the player with the enemy in the same
-teamPosition. Processed games are stored on disk (data/matchup_history.json,
-gitignored) so each analysis only fetches match details it has never seen -
-the history gets richer and cheaper over time, like the advice cache.
+teamPosition. Processed games are stored in the database (SQLite locally,
+Postgres in production - see app.storage) so each analysis only fetches match
+details it has never seen - the history gets richer and cheaper over time,
+like the advice cache.
 """
 
-import json
 import logging
-import os
+
+from app import storage
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -19,28 +20,6 @@ RIFT_QUEUES = {400, 420, 430, 440, 490}
 # Riot call budget per request: 1 id-list call + at most this many details.
 MAX_NEW_DETAILS = 10
 REMAKE_SECONDS = 300
-
-_STORE_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "data",
-    "matchup_history.json",
-)
-
-
-def _load_store():
-    try:
-        with open(_STORE_PATH) as file:
-            return json.load(file)
-    except (OSError, ValueError):
-        return {}
-
-
-def _save_store(store):
-    try:
-        with open(_STORE_PATH, "w") as file:
-            json.dump(store, file)
-    except OSError:
-        pass  # best-effort persistence
 
 
 def _extract_lane_matchup(match, puuid):
@@ -78,8 +57,7 @@ def _extract_lane_matchup(match, puuid):
 
 def update_history(client, puuid, region):
     """Fetch match details we have not processed yet and store their matchups."""
-    store = _load_store()
-    entry = store.setdefault(puuid, {"processed": [], "games": []})
+    entry = storage.history_get(puuid) or {"processed": [], "games": []}
     processed = set(entry["processed"])
 
     match_ids = client.get_match_ids(puuid, region, count=30)
@@ -98,7 +76,7 @@ def update_history(client, puuid, region):
     # Keep the store bounded per player.
     entry["processed"] = entry["processed"][-400:]
     entry["games"] = entry["games"][-300:]
-    _save_store(store)
+    storage.history_set(puuid, entry)
     return entry
 
 

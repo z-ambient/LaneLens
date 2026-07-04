@@ -27,3 +27,4 @@ Thumbs.db
 # Generated matchup-advice cache
 data/advice_cache.json
 data/matchup_history.json
+data/*.db

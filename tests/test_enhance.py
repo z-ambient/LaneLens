@@ -3,7 +3,6 @@
 import pytest
 from fastapi.testclient import TestClient
 
-import app.advice_cache as advice_cache
 import app.main as main_module
 from app.main import app
 
@@ -38,8 +37,7 @@ REQUEST = {
 
 
 @pytest.fixture(autouse=True)
-def isolated_cache(tmp_path, monkeypatch):
-    monkeypatch.setattr(advice_cache, "_CACHE_PATH", str(tmp_path / "cache.json"))
+def fixed_patch_version(monkeypatch):
     monkeypatch.setattr(main_module.champions, "get_ddragon_version", lambda: "99.1.1")
 
 

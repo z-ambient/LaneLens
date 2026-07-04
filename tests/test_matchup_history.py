@@ -4,7 +4,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.main as main_module
-import app.matchup_history as history_module
 from app.main import app
 from app.matchup_history import get_matchup_record
 
@@ -41,11 +40,6 @@ class FakeClient:
     def get_match(self, match_id, region):
         self.detail_calls += 1
         return self.matches[match_id]
-
-
-@pytest.fixture(autouse=True)
-def isolated_store(tmp_path, monkeypatch):
-    monkeypatch.setattr(history_module, "_STORE_PATH", str(tmp_path / "history.json"))
 
 
 def test_record_counts_same_position_enemy_only():
