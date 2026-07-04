@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+.env
+.env.*
+.claude
+.dockerignore
+Dockerfile
+README.md
+tests
+data/advice_cache.json
+data/matchup_history.json
+data/*.db
+**/__pycache__
+.pytest_cache
+.DS_Store

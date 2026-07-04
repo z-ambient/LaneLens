@@ -11,10 +11,13 @@ leaves this backend.
 import os
 from typing import List, Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from app import advice_cache, champions, matchup_history, runes
 from app.advice_engine import build_advice, build_team_notes
@@ -25,6 +28,20 @@ from app.lane_detection import assign_lanes, find_lane_opponent
 from app.riot_client import RiotApiError, RiotClient
 
 app = FastAPI(title="LaneLens")
+
+# Per-IP rate limiting: protects the Riot quota and the OpenAI budget when
+# the app is exposed to the internet. Generous for one player, tight enough
+# that a stranger can't drain anything.
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"ok": False, "error": "Too many requests. Wait a minute, then try again."},
+    )
 
 QUEUE_NAMES = {
     400: "Normal Draft",
@@ -86,7 +103,8 @@ def demo_matchup():
 
 
 @app.post("/api/analyze-matchup")
-def analyze_matchup(body: AnalyzeRequest):
+@limiter.limit("20/minute")
+def analyze_matchup(request: Request, body: AnalyzeRequest):
     game_name = body.gameName.strip()
     tag_line = body.tagLine.strip().lstrip("#")
 
@@ -227,7 +245,8 @@ class HistoryRequest(BaseModel):
 
 
 @app.post("/api/matchup-history")
-def get_matchup_history(body: HistoryRequest):
+@limiter.limit("15/minute")
+def get_matchup_history(request: Request, body: HistoryRequest):
     """Background lookup: the player's real win/loss record in this matchup.
 
     Walks recent Match-v5 games (only ones not seen before - results persist
@@ -257,7 +276,8 @@ class EnhanceRequest(BaseModel):
 
 
 @app.post("/api/enhance-advice")
-def enhance_advice(body: EnhanceRequest):
+@limiter.limit("10/minute")
+def enhance_advice(request: Request, body: EnhanceRequest):
     """Second phase of a progressive analysis: AI-refine the advice.
 
     Called by the frontend AFTER the instant deterministic result is already

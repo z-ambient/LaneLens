@@ -42,7 +42,10 @@ evolved from the original [LaneLens-Manual](https://github.com/z-ambient/LaneLen
    AI-quality advice in milliseconds**, so LaneLens gets faster the more
    you use it. Team-dependent fields (win condition, biggest threats, who
    to play around) are never cached — they are regenerated from the actual
-   teams in every game.
+   teams in every game. Both this cache and the matchup history live in a
+   database: a zero-config SQLite file locally, or Postgres in production
+   via `DATABASE_URL` (legacy JSON stores are imported automatically on
+   first run).
 8. **Auto-detect and matchup history** — with a saved player and Auto-detect
    on, the frontend quietly polls every 30s and brings up the dashboard the
    moment a live game appears (pauses while the tab is hidden; backs off on
@@ -124,6 +127,22 @@ python -m pytest
 ```
 
 All Riot calls are mocked — tests need no network or API key.
+
+## Deployment (Railway)
+
+The repo ships a `Dockerfile`, per-IP rate limiting, and database-backed
+storage, so deploying is configuration only:
+
+1. Create a Railway project and **provision PostgreSQL** inside it.
+2. **+ New → GitHub Repo → this repo.** Railway builds the Dockerfile.
+3. On the app service, add variables: `RIOT_API_KEY`, optional
+   `OPENAI_API_KEY`, and `DATABASE_URL` referencing the Postgres service
+   (Railway: `${{Postgres.DATABASE_URL}}`).
+4. Generate a public domain for the app service. Done — the same code runs
+   unchanged; storage lands in Postgres instead of the local SQLite file.
+
+Riot dev keys expire daily; for an always-on deployment use a **Personal
+API Key** (developer.riotgames.com → Register Product).
 
 ## Manual testing checklist
 
