@@ -28,6 +28,24 @@ AI_MODEL_FAST = os.getenv("AI_MODEL_FAST", "gpt-5.4-mini")
 DEFAULT_PLATFORM = os.getenv("DEFAULT_PLATFORM", "na1")
 DEFAULT_REGION = os.getenv("DEFAULT_REGION", "americas")
 
+
+def _trusted_proxy_hops():
+    """Number of trusted reverse proxies in front of the app.
+
+    Used to pick the real client IP out of X-Forwarded-For for rate limiting
+    (see app.main.client_ip). Default 1 = a single platform edge proxy
+    (Railway). Set to 0 for local/direct exposure (no proxy). Setting this
+    HIGHER than the real proxy count is unsafe - it lets clients spoof their
+    rate-limit key - so when unsure, keep it low.
+    """
+    try:
+        return max(0, int(os.getenv("TRUSTED_PROXY_HOPS", "1")))
+    except ValueError:
+        return 1
+
+
+TRUSTED_PROXY_HOPS = _trusted_proxy_hops()
+
 # Platform (e.g. na1) -> regional routing (e.g. americas) for the Account API.
 REGION_BY_PLATFORM = {
     "na1": "americas",
