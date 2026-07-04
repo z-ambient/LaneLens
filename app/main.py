@@ -24,7 +24,7 @@ from app.advice_engine import build_advice, build_team_notes
 from app.ai_agent import CACHEABLE_SECTIONS, SECTION_SPECS, refine_advice_with_ai, refine_section
 from app.config import DEFAULT_PLATFORM, REGION_BY_PLATFORM, riot_key_present
 from app.demo import get_demo_response
-from app.lane_detection import assign_lanes, find_lane_opponent
+from app.lane_detection import LANES, assign_lanes, find_lane_opponent
 from app.riot_client import RiotApiError, RiotClient
 
 app = FastAPI(title="LaneLens")
@@ -53,6 +53,13 @@ QUEUE_NAMES = {
     490: "Quickplay",
     700: "Clash",
     1700: "Arena",
+}
+
+# Queue strings a client may echo back to /api/enhance-advice: our own queue
+# labels plus raw gameMode values (used when the queue id is unknown).
+KNOWN_QUEUES = set(QUEUE_NAMES.values()) | {
+    "CLASSIC", "ARAM", "URF", "ARURF", "NEXUSBLITZ", "ONEFORALL",
+    "ULTBOOK", "CHERRY", "PRACTICETOOL", "TUTORIAL",
 }
 
 SUMMONER_SPELLS = {
@@ -277,6 +284,17 @@ class EnhanceRequest(BaseModel):
     section: Optional[str] = None
 
 
+def _team_records(names, fallback_champ):
+    """Client-sent team names -> validated champion records.
+
+    Unknown names are dropped (never trusted); an empty result falls back to
+    the laner so the advice engine always has a team to reason about.
+    """
+    records = [champions.find_champion_by_name(name) for name in names[:5]]
+    records = [record for record in records if record]
+    return records or [fallback_champ]
+
+
 @app.post("/api/enhance-advice")
 @limiter.limit("20/minute")
 def enhance_advice(request: Request, body: EnhanceRequest):
@@ -287,6 +305,13 @@ def enhance_advice(request: Request, body: EnhanceRequest):
     updates as its own answer lands. Matchup-specific sections (build, lane)
     are cache-first per champion+enemy+lane+patch; team-dependent sections
     (gameplan, extras) run fresh for every game.
+
+    This route is unauthenticated and cached results are served to EVERY
+    other user, so nothing client-controlled may influence a cacheable AI
+    call: champions and lane are validated against the real champion list,
+    the baseline advice is rebuilt server-side, and cacheable sections use a
+    matchup-only context (mirroring app.prewarm) - their AI input is fully
+    determined by the cache key itself.
     """
     if not body.enemyChampion:
         if body.section:
@@ -294,15 +319,29 @@ def enhance_advice(request: Request, body: EnhanceRequest):
                     "section": body.section, "delta": {}}
         return {"ok": True, "aiEnhanced": False, "cached": False, "advice": body.advice}
 
+    my_champ = champions.find_champion_by_name(body.myChampion)
+    enemy_champ = champions.find_champion_by_name(body.enemyChampion)
+    if my_champ is None or enemy_champ is None:
+        return error_response(400, "Unknown champion name.")
+    lane = body.lane or None
+    if lane is not None and lane not in LANES:
+        return error_response(400, "Unknown lane.")
+    my_name, enemy_name = my_champ["name"], enemy_champ["name"]
+
     patch = champions.get_ddragon_version()
-    context = {
-        "myChampion": body.myChampion,
-        "enemyChampion": body.enemyChampion,
-        "lane": body.lane,
-        "myTeam": body.myTeam,
-        "enemyTeam": body.enemyTeam,
-        "queue": body.queue,
-        "selectedRunes": body.selectedRunes,
+
+    # Matchup-only inputs for anything that may be cached: laner-only teams,
+    # a fixed queue, no runes, and a server-generated baseline - exactly how
+    # app.prewarm generates the same cache entries.
+    _, matchup_base = build_advice(my_champ, enemy_champ, lane, [my_champ], [enemy_champ])
+    matchup_context = {
+        "myChampion": my_name,
+        "enemyChampion": enemy_name,
+        "lane": lane,
+        "myTeam": [my_name],
+        "enemyTeam": [enemy_name],
+        "queue": "Ranked Solo/Duo",
+        "selectedRunes": None,
     }
 
     # ---- Per-section mode ----
@@ -312,26 +351,47 @@ def enhance_advice(request: Request, body: EnhanceRequest):
 
         if body.section in CACHEABLE_SECTIONS:
             cached = advice_cache.get_cached_section(
-                body.myChampion, body.enemyChampion, body.lane, patch, body.section
+                my_name, enemy_name, lane, patch, body.section
             )
             if cached:
                 return {"ok": True, "aiEnhanced": True, "cached": True,
                         "section": body.section, "delta": cached}
 
-        delta = refine_section(context, body.advice, body.section)
+            delta = refine_section(matchup_context, matchup_base, body.section)
+            if delta is None:
+                return {"ok": True, "aiEnhanced": False, "cached": False,
+                        "section": body.section, "delta": {}}
+            advice_cache.store_section(my_name, enemy_name, lane, patch, delta, body.section)
+            return {"ok": True, "aiEnhanced": True, "cached": False,
+                    "section": body.section, "delta": delta}
+
+        # Per-game sections are never cached, so this game's validated teams,
+        # queue, and runes are safe context: the answer only reaches the
+        # requester, never another user.
+        my_team = _team_records(body.myTeam, my_champ)
+        enemy_team = _team_records(body.enemyTeam, enemy_champ)
+        _, game_base = build_advice(my_champ, enemy_champ, lane, my_team, enemy_team)
+        game_context = {
+            "myChampion": my_name,
+            "enemyChampion": enemy_name,
+            "lane": lane,
+            "myTeam": [champ["name"] for champ in my_team],
+            "enemyTeam": [champ["name"] for champ in enemy_team],
+            "queue": body.queue if body.queue in KNOWN_QUEUES else None,
+            "selectedRunes": body.selectedRunes,
+        }
+        delta = refine_section(game_context, game_base, body.section)
         if delta is None:
             return {"ok": True, "aiEnhanced": False, "cached": False,
                     "section": body.section, "delta": {}}
-
-        if body.section in CACHEABLE_SECTIONS:
-            advice_cache.store_section(
-                body.myChampion, body.enemyChampion, body.lane, patch, delta, body.section
-            )
         return {"ok": True, "aiEnhanced": True, "cached": False,
                 "section": body.section, "delta": delta}
 
     # ---- Legacy full mode ----
-    cached = advice_cache.get_cached(body.myChampion, body.enemyChampion, body.lane, patch)
+    # Cache-first refinement of the matchup-core fields. The AI call and the
+    # stored entry are built from matchup_context/matchup_base only; the
+    # client's own advice is merely the base the core delta is merged onto.
+    cached = advice_cache.get_cached(my_name, enemy_name, lane, patch)
     if cached:
         return {
             "ok": True,
@@ -340,12 +400,14 @@ def enhance_advice(request: Request, body: EnhanceRequest):
             "advice": advice_cache.merge_cached(body.advice, cached),
         }
 
-    ai_advice = refine_advice_with_ai(context, body.advice)
+    ai_advice = refine_advice_with_ai(matchup_context, matchup_base)
     if ai_advice is None:
         return {"ok": True, "aiEnhanced": False, "cached": False, "advice": body.advice}
 
-    advice_cache.store(body.myChampion, body.enemyChampion, body.lane, patch, ai_advice)
-    return {"ok": True, "aiEnhanced": True, "cached": False, "advice": ai_advice}
+    advice_cache.store(my_name, enemy_name, lane, patch, ai_advice)
+    core = {field: ai_advice[field] for field in advice_cache.CORE_FIELDS if field in ai_advice}
+    return {"ok": True, "aiEnhanced": True, "cached": False,
+            "advice": advice_cache.merge_cached(body.advice, core)}
 
 
 app.include_router(auth.router)
