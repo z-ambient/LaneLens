@@ -19,7 +19,7 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from app import advice_cache, champions, matchup_history, runes
+from app import advice_cache, auth, champions, matchup_history, runes
 from app.advice_engine import build_advice, build_team_notes
 from app.ai_agent import CACHEABLE_SECTIONS, SECTION_SPECS, refine_advice_with_ai, refine_section
 from app.config import DEFAULT_PLATFORM, REGION_BY_PLATFORM, riot_key_present
@@ -346,6 +346,9 @@ def enhance_advice(request: Request, body: EnhanceRequest):
 
     advice_cache.store(body.myChampion, body.enemyChampion, body.lane, patch, ai_advice)
     return {"ok": True, "aiEnhanced": True, "cached": False, "advice": ai_advice}
+
+
+app.include_router(auth.router)
 
 
 # Serve the frontend last so /api/* routes take priority.

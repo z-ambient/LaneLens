@@ -14,7 +14,7 @@ import json
 import logging
 import os
 
-from sqlalchemy import Column, String, Text, create_engine, select
+from sqlalchemy import BigInteger, Column, String, Text, create_engine, select
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 logger = logging.getLogger("uvicorn.error")
@@ -36,6 +36,23 @@ class HistoryRow(Base):
     __tablename__ = "matchup_history"
     puuid = Column(String(128), primary_key=True)
     entry_json = Column(Text, nullable=False)
+
+
+class UserRow(Base):
+    __tablename__ = "users"
+    id = Column(String(32), primary_key=True)  # Discord user id
+    username = Column(String(100), nullable=False)
+    avatar = Column(String(64))
+    riot_game_name = Column(String(64))
+    riot_tag_line = Column(String(16))
+    riot_platform = Column(String(8))
+
+
+class SessionRow(Base):
+    __tablename__ = "sessions"
+    token = Column(String(64), primary_key=True)
+    user_id = Column(String(32), nullable=False)
+    expires_at = Column(BigInteger, nullable=False)  # epoch seconds
 
 
 _engine = None
@@ -97,6 +114,85 @@ def history_set(puuid, entry):
     with _session() as session:
         session.merge(HistoryRow(puuid=puuid, entry_json=json.dumps(entry)))
         session.commit()
+
+
+# ---------- Users & sessions (Discord login) ----------
+
+def _user_dict(row):
+    return {
+        "id": row.id,
+        "username": row.username,
+        "avatar": row.avatar,
+        "riotProfile": (
+            {
+                "gameName": row.riot_game_name,
+                "tagLine": row.riot_tag_line,
+                "platform": row.riot_platform or "na1",
+            }
+            if row.riot_game_name and row.riot_tag_line
+            else None
+        ),
+    }
+
+
+def user_upsert(user_id, username, avatar):
+    with _session() as session:
+        row = session.get(UserRow, user_id)
+        if row is None:
+            row = UserRow(id=user_id, username=username, avatar=avatar)
+            session.add(row)
+        else:
+            row.username = username
+            row.avatar = avatar
+        session.commit()
+
+
+def user_get(user_id):
+    with _session() as session:
+        row = session.get(UserRow, user_id)
+        return _user_dict(row) if row else None
+
+
+def user_set_riot_profile(user_id, game_name, tag_line, platform):
+    with _session() as session:
+        row = session.get(UserRow, user_id)
+        if row is None:
+            return False
+        row.riot_game_name = game_name
+        row.riot_tag_line = tag_line
+        row.riot_platform = platform
+        session.commit()
+        return True
+
+
+def session_create(token, user_id, expires_at):
+    with _session() as session:
+        session.merge(SessionRow(token=token, user_id=user_id, expires_at=expires_at))
+        session.commit()
+
+
+def session_get_user(token, now):
+    """Resolve a session token to its user; expired sessions are removed."""
+    if not token:
+        return None
+    with _session() as session:
+        row = session.get(SessionRow, token)
+        if row is None:
+            return None
+        if row.expires_at < now:
+            session.delete(row)
+            session.commit()
+            return None
+        user = session.get(UserRow, row.user_id)
+        return _user_dict(user) if user else None
+
+
+def session_delete(token):
+    with _session() as session:
+        row = session.get(SessionRow, token)
+        if row:
+            session.delete(row)
+            session.commit()
 
 
 # ---------- One-time import of the old JSON stores ----------

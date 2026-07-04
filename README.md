@@ -126,6 +126,22 @@ python -m pytest
 
 All Riot calls are mocked — tests need no network or API key.
 
+## Discord login (optional)
+
+"Sign in with Discord" makes the saved Riot profile follow the user across
+devices (sessions are HttpOnly cookies; scope is `identify` only). Setup:
+
+1. Create an application at <https://discord.com/developers/applications>.
+2. OAuth2 tab → copy the **Client ID** and **Client Secret**.
+3. Same tab → **Redirects** → add:
+   - `http://127.0.0.1:8000/auth/callback` (local dev)
+   - `https://<your-domain>/auth/callback` (production)
+4. Set `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` in `.env` (local) and
+   in the host's variables (production).
+
+Without the variables, the login button simply doesn't appear and everything
+else works.
+
 ## Deployment (Railway)
 
 The repo ships a `Dockerfile`, per-IP rate limiting, and database-backed

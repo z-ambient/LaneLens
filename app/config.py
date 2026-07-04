@@ -14,6 +14,10 @@ load_dotenv()
 RIOT_API_KEY = os.getenv("RIOT_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Discord OAuth (optional) - enables "Sign in with Discord" accounts.
+DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
+DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
+
 DEFAULT_PLATFORM = os.getenv("DEFAULT_PLATFORM", "na1")
 DEFAULT_REGION = os.getenv("DEFAULT_REGION", "americas")
 

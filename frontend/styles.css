@@ -323,6 +323,39 @@ body {
 
 .chip-btn:hover { color: var(--gold-light); background: rgba(200, 155, 60, 0.12); }
 
+/* Discord account area (always in the top bar) */
+.account-area { display: flex; align-items: center; margin-left: auto; }
+
+.discord-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #5865f2;
+    background: rgba(88, 101, 242, 0.12);
+    color: #c9cfff;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.discord-btn:hover { background: rgba(88, 101, 242, 0.25); }
+.discord-btn svg { width: 18px; height: 18px; }
+
+.account-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px 5px 6px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.85rem;
+}
+
+.account-chip img { width: 24px; height: 24px; border-radius: 50%; display: block; }
+.account-chip .account-name { color: var(--gold-light); font-weight: 700; }
+
 .auto-btn {
     border: 1px solid var(--border);
     border-radius: 999px;
