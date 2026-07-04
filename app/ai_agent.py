@@ -151,6 +151,14 @@ def refine_section(context, base_advice, section):
         return None
 
 
+# A misbehaving model reply gets cached and then served to every user, so no
+# string leaves these parsers uncapped. Limits sit far above the longest
+# legitimate values, so real advice is never clipped.
+MAX_TEXT_CHARS = 2000   # advice paragraphs
+MAX_TIP_CHARS = 400     # one tip / item warning
+MAX_ITEM_CHARS = 80     # item names and slot labels
+
+
 def _parse_section(raw_text, section):
     spec = SECTION_SPECS[section]
     data = json.loads(_strip_fences(raw_text))
@@ -159,7 +167,7 @@ def _parse_section(raw_text, section):
     for field in spec["text"]:
         value = data.get(field)
         if isinstance(value, str) and value.strip():
-            delta[field] = value.strip()
+            delta[field] = value.strip()[:MAX_TEXT_CHARS]
 
     if spec.get("full_build"):
         cleaned = _clean_full_build(data.get("fullBuild"))
@@ -169,17 +177,17 @@ def _parse_section(raw_text, section):
     if spec.get("tips"):
         tips = data.get("extraTips")
         if isinstance(tips, list) and tips:
-            delta["extraTips"] = [str(tip) for tip in tips][:6]
+            delta["extraTips"] = [str(tip)[:MAX_TIP_CHARS] for tip in tips][:6]
 
     extras = {}
     for field in spec["extras"]:
         value = data.get(field)
         if isinstance(value, str) and value.strip():
-            extras[field] = value.strip()
+            extras[field] = value.strip()[:MAX_TEXT_CHARS]
     if spec.get("warnings"):
         warnings = data.get("itemWarnings")
         if isinstance(warnings, list) and warnings:
-            extras["itemWarnings"] = [str(warning) for warning in warnings][:6]
+            extras["itemWarnings"] = [str(warning)[:MAX_TIP_CHARS] for warning in warnings][:6]
     if extras:
         delta["extras"] = extras
 
@@ -202,9 +210,9 @@ def _clean_full_build(full_build):
     for slot in full_build[:8]:
         if isinstance(slot, dict) and slot.get("item"):
             cleaned.append({
-                "label": str(slot.get("label", "Item")),
-                "item": str(slot["item"]),
-                "options": [str(option) for option in (slot.get("options") or [])][:3],
+                "label": str(slot.get("label", "Item"))[:MAX_ITEM_CHARS],
+                "item": str(slot["item"])[:MAX_ITEM_CHARS],
+                "options": [str(option)[:MAX_ITEM_CHARS] for option in (slot.get("options") or [])][:3],
             })
     return cleaned or None
 
@@ -221,7 +229,7 @@ def _parse_and_merge(raw_text, base_advice):
     for field in _TEXT_FIELDS:
         value = data.get(field)
         if isinstance(value, str) and value.strip():
-            merged[field] = value.strip()
+            merged[field] = value.strip()[:MAX_TEXT_CHARS]
 
     full_build = data.get("fullBuild")
     if isinstance(full_build, list):
@@ -229,16 +237,16 @@ def _parse_and_merge(raw_text, base_advice):
         for slot in full_build[:8]:
             if isinstance(slot, dict) and slot.get("item"):
                 cleaned.append({
-                    "label": str(slot.get("label", "Item")),
-                    "item": str(slot["item"]),
-                    "options": [str(option) for option in (slot.get("options") or [])][:3],
+                    "label": str(slot.get("label", "Item"))[:MAX_ITEM_CHARS],
+                    "item": str(slot["item"])[:MAX_ITEM_CHARS],
+                    "options": [str(option)[:MAX_ITEM_CHARS] for option in (slot.get("options") or [])][:3],
                 })
         if cleaned:
             merged["fullBuild"] = cleaned
 
     tips = data.get("extraTips")
     if isinstance(tips, list) and tips:
-        merged["extraTips"] = [str(tip) for tip in tips][:6]
+        merged["extraTips"] = [str(tip)[:MAX_TIP_CHARS] for tip in tips][:6]
 
     extras = dict(base_advice.get("extras", {}))
     ai_extras = data.get("extras")
@@ -246,10 +254,10 @@ def _parse_and_merge(raw_text, base_advice):
         for field in _EXTRA_FIELDS:
             value = ai_extras.get(field)
             if isinstance(value, str) and value.strip():
-                extras[field] = value.strip()
+                extras[field] = value.strip()[:MAX_TEXT_CHARS]
         warnings = ai_extras.get("itemWarnings")
         if isinstance(warnings, list) and warnings:
-            extras["itemWarnings"] = [str(warning) for warning in warnings][:6]
+            extras["itemWarnings"] = [str(warning)[:MAX_TIP_CHARS] for warning in warnings][:6]
     merged["extras"] = extras
 
     return merged

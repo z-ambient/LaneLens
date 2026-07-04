@@ -283,3 +283,37 @@ def test_legacy_full_mode_caches_only_server_derived_advice(monkeypatch):
     assert cached is not None
     assert INJECTION not in json.dumps(cached)
     assert cached["lanePlan"] == "AI lane plan"
+
+
+def test_pathological_ai_strings_capped_before_caching():
+    """A misbehaving model reply is cached and served to everyone, so every
+    string is truncated at parse time - lists were already length-capped."""
+    import app.ai_agent as ai_agent
+
+    huge = "x" * 50_000
+    lane = ai_agent._parse_section(
+        json.dumps({"lanePlan": huge, "extraTips": [huge, huge]}), "lane"
+    )
+    assert len(lane["lanePlan"]) == ai_agent.MAX_TEXT_CHARS
+    assert [len(tip) for tip in lane["extraTips"]] == [ai_agent.MAX_TIP_CHARS] * 2
+
+    build = ai_agent._parse_section(
+        json.dumps({
+            "startingItem": huge,
+            "fullBuild": [{"label": huge, "item": huge, "options": [huge]}],
+        }),
+        "build",
+    )
+    assert len(build["startingItem"]) == ai_agent.MAX_TEXT_CHARS
+    slot = build["fullBuild"][0]
+    assert len(slot["label"]) == len(slot["item"]) == ai_agent.MAX_ITEM_CHARS
+    assert len(slot["options"][0]) == ai_agent.MAX_ITEM_CHARS
+
+    extras = ai_agent._parse_section(
+        json.dumps({"jungleThreat": huge, "itemWarnings": [huge]}), "extras"
+    )
+    assert len(extras["extras"]["jungleThreat"]) == ai_agent.MAX_TEXT_CHARS
+    assert len(extras["extras"]["itemWarnings"][0]) == ai_agent.MAX_TIP_CHARS
+
+    merged = ai_agent._parse_and_merge(json.dumps({"lanePlan": huge}), {})
+    assert len(merged["lanePlan"]) == ai_agent.MAX_TEXT_CHARS
