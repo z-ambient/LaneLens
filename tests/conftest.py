@@ -3,7 +3,7 @@
 import pytest
 
 from app import storage
-from app.main import limiter
+from app.rate_limit import limiter
 
 
 @pytest.fixture(autouse=True)

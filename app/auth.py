@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 
 from app import storage
 from app.config import DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET
+from app.rate_limit import limiter
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -91,7 +92,12 @@ def current_user(request):
     )
 
 
+# Per-IP limits: sign-in actions happen a handful of times per session, so
+# 10/minute never touches a real user but shuts down scripted abuse (the
+# callback makes two outbound Discord calls per hit). /api/me is polled on
+# every page load and gets more headroom.
 @router.get("/auth/login")
+@limiter.limit("10/minute")
 def login(request: Request):
     if not discord_configured():
         return JSONResponse(
@@ -115,6 +121,7 @@ def login(request: Request):
 
 
 @router.get("/auth/callback")
+@limiter.limit("10/minute")
 def callback(request: Request, code: str = None, state: str = None, error: str = None):
     failed = RedirectResponse("/?login=failed")
     failed.delete_cookie(STATE_COOKIE)
@@ -146,6 +153,7 @@ def callback(request: Request, code: str = None, state: str = None, error: str =
 
 
 @router.post("/auth/logout")
+@limiter.limit("10/minute")
 def logout(request: Request):
     storage.session_delete(request.cookies.get(SESSION_COOKIE))
     response = JSONResponse({"ok": True})
@@ -154,6 +162,7 @@ def logout(request: Request):
 
 
 @router.get("/api/me")
+@limiter.limit("30/minute")
 def me(request: Request):
     user = current_user(request)
     return {
@@ -173,6 +182,7 @@ class ProfileBody(BaseModel):
 
 
 @router.post("/api/me/profile")
+@limiter.limit("10/minute")
 def save_profile(request: Request, body: ProfileBody):
     """Persist the saved Riot profile on the account (cross-device)."""
     user = current_user(request)

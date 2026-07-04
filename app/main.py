@@ -16,9 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StringConstraints
-from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from app import advice_cache, auth, champions, matchup_history, runes
 from app.advice_engine import build_advice, build_team_notes
@@ -26,47 +24,18 @@ from app.ai_agent import CACHEABLE_SECTIONS, SECTION_SPECS, refine_advice_with_a
 from app.config import (
     DEFAULT_PLATFORM,
     REGION_BY_PLATFORM,
-    TRUSTED_PROXY_HOPS,
     riot_key_present,
 )
 from app.demo import get_demo_response
 from app.lane_detection import LANES, assign_lanes, find_lane_opponent
+from app.rate_limit import limiter
 from app.riot_client import RiotApiError, RiotClient
 
 app = FastAPI(title="LaneLens")
 
-
-def client_ip(request: Request) -> str:
-    """Rate-limit key: the real client IP, resistant to header spoofing.
-
-    A client can PREPEND fake entries to X-Forwarded-For, but every trusted
-    proxy in front of us APPENDS the address it actually saw. So the real
-    client sits TRUSTED_PROXY_HOPS entries from the RIGHT end - never the
-    left/client-controlled end that get_remote_address would read. When the
-    header is missing (local/direct) or too short to trust, fall back to the
-    socket IP, which fails safe (over-limits rather than under-limits).
-
-    All X-Forwarded-For headers are flattened in wire order before indexing:
-    a client can split its spoofed entries across several separate headers,
-    but the trusted proxy's appended value is always last overall, so the
-    rightmost entry of the combined chain is still the one we can trust.
-    """
-    if TRUSTED_PROXY_HOPS:
-        parts = [
-            entry.strip()
-            for header in request.headers.getlist("x-forwarded-for")
-            for entry in header.split(",")
-            if entry.strip()
-        ]
-        if len(parts) >= TRUSTED_PROXY_HOPS:
-            return parts[-TRUSTED_PROXY_HOPS]
-    return get_remote_address(request)
-
-
 # Per-IP rate limiting: protects the Riot quota and the OpenAI budget when
-# the app is exposed to the internet. Generous for one player, tight enough
-# that a stranger can't drain anything.
-limiter = Limiter(key_func=client_ip)
+# the app is exposed to the internet (key function and limiter live in
+# app.rate_limit, shared with the auth routes).
 app.state.limiter = limiter
 
 
