@@ -77,11 +77,16 @@ body {
     display: grid;
     place-items: center;
     border-radius: 10px;
+    border: none;
+    background: transparent;
     color: var(--muted-text);
     font-size: 1rem;
-    cursor: default;
+    cursor: pointer;
     opacity: 0.55;
+    transition: opacity 0.15s ease, background 0.15s ease;
 }
+
+.rail-icon:hover { opacity: 1; background: rgba(200, 155, 60, 0.12); color: var(--gold-light); }
 
 .rail-icon.active {
     color: var(--background);
@@ -287,6 +292,10 @@ body {
     flex-wrap: wrap;
 }
 
+/* On home the hero's prefilled Analyze button covers it - hide the
+   redundant top-bar Find My Matchup there (chip + auto-detect remain). */
+body.is-home #find-my-matchup { display: none; }
+
 /* Saved-player area (replaces the form when a profile is remembered) */
 .profile-area {
     display: flex;
@@ -342,19 +351,107 @@ body {
 .discord-btn:hover { background: rgba(88, 101, 242, 0.25); }
 .discord-btn svg { width: 18px; height: 18px; }
 
+.account-menu-wrap { position: relative; }
+
 .account-chip {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 5px 8px 5px 6px;
+    padding: 5px 10px 5px 6px;
     background: var(--background);
     border: 1px solid var(--border);
     border-radius: 999px;
+    font: inherit;
     font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
 }
 
+.account-chip:hover { border-color: var(--gold); }
+
 .account-chip img { width: 24px; height: 24px; border-radius: 50%; display: block; }
+
 .account-chip .account-name { color: var(--gold-light); font-weight: 700; }
+
+.account-caret { display: grid; place-items: center; color: var(--muted-text); }
+.account-caret svg { width: 13px; height: 13px; }
+
+.account-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 170px;
+    padding: 6px;
+    display: grid;
+    gap: 2px;
+    background: linear-gradient(150deg, var(--panel-light), var(--panel));
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+    z-index: 60;
+}
+
+.account-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    background: none;
+    border: none;
+    border-radius: 7px;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.87rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.account-menu-item:hover { background: rgba(200, 155, 60, 0.12); color: var(--gold-light); }
+
+.account-menu-item svg { width: 15px; height: 15px; color: var(--muted-text); flex-shrink: 0; }
+.account-menu-item:hover svg { color: var(--gold); }
+
+/* ---------- Player settings ---------- */
+
+.settings { display: flex; justify-content: center; padding-top: 20px; }
+
+.settings-panel { width: 100%; max-width: 560px; display: grid; gap: 14px; }
+
+.settings-desc { margin: 0; color: var(--muted-text); font-size: 0.9rem; line-height: 1.6; }
+
+.settings-field { display: grid; gap: 6px; }
+
+.settings-field label {
+    color: var(--gold-light);
+    font-weight: bold;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.settings-field input, .settings-field select {
+    width: 100%;
+    padding: 12px 14px;
+    color: var(--text);
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font: inherit;
+}
+
+.settings-actions { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+
+.settings-feedback { color: var(--easy); font-size: 0.88rem; font-weight: 600; }
+.settings-feedback.is-error { color: var(--error); }
+
+.settings-note {
+    margin: 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    color: var(--muted-text);
+    font-size: 0.8rem;
+}
 
 .auto-btn {
     border: 1px solid var(--border);

@@ -40,20 +40,22 @@ function goHome() {
     const pick = HOME_SPLASHES[Math.floor(Math.random() * HOME_SPLASHES.length)];
     splash.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${pick}_0.jpg`;
 
-    // The search controls live in the hero on the home screen, and the
-    // status panels (loading / error / no-game) show above them there.
+    // The search inputs live in the hero on the home screen; the saved-player
+    // controls (Find My Matchup / auto-detect) stay in the top bar in every
+    // view. Status panels (loading / error / no-game) show above the inputs.
     document.getElementById("hero-status").append(
         document.getElementById("loading"),
         errorPanel,
         document.getElementById("no-game")
     );
     document.getElementById("hero-search").append(
-        document.getElementById("profile-area"),
         document.getElementById("analyze-form"),
         demoBtn
     );
     document.body.classList.add("is-home");
     document.getElementById("home").classList.remove("hidden");
+    hideSettings();
+    renderProfileArea();
     window.scrollTo({ top: 0, behavior: "instant" });
 }
 
@@ -62,15 +64,54 @@ function leaveHome() {
     document.getElementById("home").classList.add("hidden");
     document.body.classList.remove("is-home");
 
-    // Controls return to the top bar, status panels to the results column.
+    // Controls return to the top bar (account chip stays LAST so it is
+    // always pinned to the right edge); status panels to the results column.
     document.querySelector(".topbar").append(
         document.getElementById("profile-area"),
         document.getElementById("analyze-form"),
-        demoBtn
+        demoBtn,
+        document.getElementById("account-area")
     );
     dashboard.parentNode.insertBefore(document.getElementById("loading"), dashboard);
     dashboard.parentNode.insertBefore(errorPanel, dashboard);
     dashboard.parentNode.insertBefore(document.getElementById("no-game"), dashboard);
+    renderProfileArea();
+}
+
+// ---------- Settings view ----------
+
+function setRailActive(view) {
+    document.getElementById("rail-home").classList.toggle("active", view !== "settings");
+    document.getElementById("rail-settings").classList.toggle("active", view === "settings");
+}
+
+function showSettings() {
+    leaveHome();
+    dashboard.classList.add("hidden");
+    document.getElementById("loading").classList.add("hidden");
+    errorPanel.classList.add("hidden");
+    document.getElementById("no-game").classList.add("hidden");
+
+    // Prefill from the saved profile.
+    const profile = loadProfile();
+    document.getElementById("settings-game-name").value = profile ? profile.gameName : "";
+    document.getElementById("settings-tag-line").value = profile ? profile.tagLine : "";
+    if (profile && profile.platform) {
+        document.getElementById("settings-platform").value = profile.platform;
+    }
+    document.getElementById("settings-feedback").textContent = "";
+    document.getElementById("settings-sync-note").textContent = currentUser
+        ? `Synced to your Discord account (${currentUser.username}) — available on any device you sign in on.`
+        : "Saved in this browser. Sign in with Discord to sync across devices.";
+
+    document.getElementById("settings").classList.remove("hidden");
+    setRailActive("settings");
+    window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function hideSettings() {
+    document.getElementById("settings").classList.add("hidden");
+    setRailActive("main");
 }
 
 // ---------- Discord account ----------
@@ -86,7 +127,12 @@ function renderAccountArea() {
     area.replaceChildren();
 
     if (currentUser) {
-        const chip = el("span", "account-chip");
+        const wrap = el("div", "account-menu-wrap");
+
+        // The chip itself (avatar + name) toggles the dropdown.
+        const chip = el("button", "account-chip");
+        chip.type = "button";
+        chip.title = "Account menu";
         if (currentUser.avatar) {
             const img = document.createElement("img");
             img.src = `https://cdn.discordapp.com/avatars/${currentUser.id}/${currentUser.avatar}.png?size=64`;
@@ -94,18 +140,44 @@ function renderAccountArea() {
             chip.appendChild(img);
         }
         chip.appendChild(el("span", "account-name", currentUser.username));
-        const out = el("button", "chip-btn");
-        out.type = "button";
-        out.textContent = "sign out";
-        out.addEventListener("click", async () => {
+        const caret = el("span", "account-caret");
+        caret.innerHTML =
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+        chip.appendChild(caret);
+
+        const menu = el("div", "account-menu hidden");
+
+        const settingsItem = el("button", "account-menu-item");
+        settingsItem.type = "button";
+        settingsItem.innerHTML =
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>';
+        settingsItem.appendChild(el("span", null, "Settings"));
+        settingsItem.addEventListener("click", () => {
+            menu.classList.add("hidden");
+            showSettings();
+        });
+
+        const signOutItem = el("button", "account-menu-item");
+        signOutItem.type = "button";
+        signOutItem.innerHTML =
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+        signOutItem.appendChild(el("span", null, "Sign out"));
+        signOutItem.addEventListener("click", async () => {
             try {
                 await fetch("/auth/logout", { method: "POST" });
             } catch (err) { /* signing out is best-effort */ }
             currentUser = null;
             renderAccountArea();
         });
-        chip.appendChild(out);
-        area.appendChild(chip);
+
+        menu.append(settingsItem, signOutItem);
+        chip.addEventListener("click", (event) => {
+            event.stopPropagation();
+            menu.classList.toggle("hidden");
+        });
+
+        wrap.append(chip, menu);
+        area.appendChild(wrap);
     } else if (discordConfigured) {
         const button = el("button", "discord-btn");
         button.type = "button";
@@ -177,19 +249,22 @@ function clearProfile() {
     syncWatch();
 }
 
-// Show one-click "Find My Matchup" when a player is saved; otherwise the form.
+// Show one-click "Find My Matchup" when a player is saved. On the home
+// hero the inputs stay VISIBLE and prefilled alongside it (freely editable);
+// only the compact top bar collapses the form behind the profile chip.
 function renderProfileArea(forceForm) {
     const profile = loadProfile();
     const area = document.getElementById("profile-area");
-    const showForm = forceForm || !profile;
+    const isHome = document.body.classList.contains("is-home");
+    const showProfileUi = !!profile && !forceForm;
 
-    area.classList.toggle("hidden", showForm);
-    form.classList.toggle("hidden", !showForm);
+    area.classList.toggle("hidden", !showProfileUi);
+    form.classList.toggle("hidden", showProfileUi && !isHome);
 
     if (profile) {
         document.getElementById("profile-name").textContent =
             `${profile.gameName} #${profile.tagLine}`;
-        // Prefill the form for when the user switches back to it.
+        // Keep the inputs auto-filled with the saved values.
         document.getElementById("game-name").value = profile.gameName;
         document.getElementById("tag-line").value = profile.tagLine;
         if (profile.platform) document.getElementById("platform").value = profile.platform;
@@ -214,6 +289,7 @@ function startLoading() {
     let step = 0;
     enhanceToken++; // invalidate any in-flight AI enhancement
     clearAiStatus();
+    hideSettings();
     errorPanel.classList.add("hidden");
     document.getElementById("no-game").classList.add("hidden");
     dashboard.classList.add("hidden");
@@ -1173,6 +1249,7 @@ function setSourceNote(data, aiState) {
 
 async function renderDashboard(data) {
     leaveHome(); // auto-detect can land here without a loading phase
+    hideSettings();
     errorPanel.classList.add("hidden");
 
     const items = await loadItemIndex(data.ddragonVersion);
@@ -1274,7 +1351,40 @@ document.addEventListener("visibilitychange", () => {
     if (!document.hidden && watchTimer) watchTick();
 });
 
+// Close the account dropdown when clicking anywhere else or pressing Escape.
+document.addEventListener("click", (event) => {
+    if (!event.target.closest(".account-menu-wrap")) {
+        document.querySelectorAll(".account-menu").forEach((menu) => menu.classList.add("hidden"));
+    }
+});
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+        document.querySelectorAll(".account-menu").forEach((menu) => menu.classList.add("hidden"));
+    }
+});
+
 document.getElementById("brand-home").addEventListener("click", goHome);
+document.getElementById("rail-home").addEventListener("click", goHome);
+document.getElementById("rail-settings").addEventListener("click", showSettings);
+
+document.getElementById("settings-save").addEventListener("click", () => {
+    const gameName = document.getElementById("settings-game-name").value.trim();
+    const tagLine = document.getElementById("settings-tag-line").value.trim().replace(/^#/, "");
+    const platform = document.getElementById("settings-platform").value;
+    const feedback = document.getElementById("settings-feedback");
+
+    if (!gameName || !tagLine) {
+        feedback.textContent = "Enter both a game name and a tagline.";
+        feedback.classList.add("is-error");
+        return;
+    }
+    const profile = { gameName, tagLine, platform };
+    saveProfile(profile);
+    syncProfileToAccount(profile);
+    feedback.classList.remove("is-error");
+    feedback.textContent = "Saved ✓";
+    setTimeout(() => { feedback.textContent = ""; }, 2500);
+});
 
 // Restore the saved player on page load and start on the home screen.
 renderProfileArea();

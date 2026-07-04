@@ -18,12 +18,18 @@
             </svg>
         </span>
         <nav class="rail-nav">
-            <span class="rail-icon active" title="Matchup">
+            <button type="button" id="rail-home" class="rail-icon active" title="Matchup">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     <path d="M9 22V12h6v10"></path>
                 </svg>
-            </span>
+            </button>
+            <button type="button" id="rail-settings" class="rail-icon" title="Player settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+            </button>
         </nav>
     </aside>
 
@@ -87,7 +93,7 @@
                     <p class="home-tagline">Win lane. Play smarter. Know the matchup.</p>
                     <p class="home-desc">
                         LaneLens reads your live League of Legends game the moment you load in.
-                        Know your matchup, your full build, and get an AI-refined game plan
+                        Know your matchup, your full build, and get a game plan
                         before minions spawn.
                     </p>
                     <div class="home-features">
@@ -133,6 +139,46 @@
                 <h3 class="no-game-title">No Live Game Found</h3>
                 <p id="no-game-text" class="no-game-text">Start a League match, then try again.</p>
                 <p class="no-game-hint">Want a preview in the meantime? Try the <button type="button" id="no-game-demo-btn" class="link-btn">demo match</button>.</p>
+            </section>
+
+            <!-- Player settings -->
+            <section id="settings" class="settings hidden">
+                <div class="panel settings-panel">
+                    <h3>Player Settings</h3>
+                    <p class="settings-desc">
+                        Save your Riot ID here and it will always be filled in on the
+                        home page — you can still edit or clear it there any time.
+                    </p>
+                    <div class="settings-field">
+                        <label for="settings-game-name">Riot Game Name</label>
+                        <input id="settings-game-name" type="text" placeholder="e.g. Faker" autocomplete="off">
+                    </div>
+                    <div class="settings-field">
+                        <label for="settings-tag-line">Tagline</label>
+                        <input id="settings-tag-line" type="text" placeholder="NA1" autocomplete="off">
+                    </div>
+                    <div class="settings-field">
+                        <label for="settings-platform">Region</label>
+                        <select id="settings-platform">
+                            <option value="na1" selected>North America</option>
+                            <option value="euw1">Europe West</option>
+                            <option value="eun1">Europe Nordic &amp; East</option>
+                            <option value="kr">Korea</option>
+                            <option value="br1">Brazil</option>
+                            <option value="la1">LAN</option>
+                            <option value="la2">LAS</option>
+                            <option value="oc1">Oceania</option>
+                            <option value="jp1">Japan</option>
+                            <option value="tr1">Türkiye</option>
+                            <option value="ru">Russia</option>
+                        </select>
+                    </div>
+                    <div class="settings-actions">
+                        <button type="button" id="settings-save" class="btn-gold">Save</button>
+                        <span id="settings-feedback" class="settings-feedback"></span>
+                    </div>
+                    <p id="settings-sync-note" class="settings-note"></p>
+                </div>
             </section>
 
             <!-- Dashboard grid -->
