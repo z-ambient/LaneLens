@@ -143,7 +143,7 @@ function startLoading() {
     // display there, above the search card. Success leaves via renderDashboard.
     let step = 0;
     enhanceToken++; // invalidate any in-flight AI enhancement
-    setAiStatus(null);
+    clearAiStatus();
     errorPanel.classList.add("hidden");
     document.getElementById("no-game").classList.add("hidden");
     dashboard.classList.add("hidden");
@@ -468,66 +468,118 @@ async function watchTick() {
 
 let enhanceToken = 0;
 
-// Panels whose content the AI refines - they glow while it works.
-const AI_GLOW_SELECTOR = ".main-card, .featured, .build, .extras, #stat-tiles .tile";
+// Each AI section refines its own panels: they glow while that section is
+// in flight and settle the moment its response lands.
+const AI_SECTIONS = {
+    build: { glow: [".build"], badge: null },
+    lane: { glow: [".main-card"], badge: null },
+    gameplan: { glow: [".featured"], badge: ".featured .ai-status" },
+    extras: { glow: [".extras", "#stat-tiles .tile"], badge: ".extras .ai-status" },
+};
 
-function setAiStatus(state) {
-    document.querySelectorAll(".ai-status").forEach((badge) => {
-        badge.classList.remove("hidden", "thinking", "done");
-        if (state === "thinking") {
-            badge.classList.add("thinking");
-            badge.textContent = "✦ AI refining advice…";
-        } else if (state === "done") {
-            badge.classList.add("done");
-            badge.textContent = "✦ AI enhanced";
-        } else {
-            badge.classList.add("hidden");
-            badge.textContent = "";
-        }
-    });
-    document.querySelectorAll(AI_GLOW_SELECTOR).forEach((panel) => {
-        panel.classList.toggle("ai-glow", state === "thinking");
-    });
+// What to re-render when a section's delta arrives.
+const SECTION_RENDER = {
+    build: (advice, items, version) => renderBuild(advice, items, version),
+    lane: (advice) => {
+        renderLaneTips(advice);
+        renderExtraCards(advice); // quick-tips card lives in the extras grid
+    },
+    gameplan: (advice) => {
+        renderFeatured(advice, advice.extras || {});
+        renderTiles(advice.extras || {}); // biggest-threats tile
+    },
+    extras: (advice) => {
+        renderTiles(advice.extras || {});
+        renderExtraCards(advice);
+    },
+};
+
+function setSectionState(section, state) {
+    const spec = AI_SECTIONS[section];
+    spec.glow.forEach((selector) =>
+        document.querySelectorAll(selector).forEach((panel) =>
+            panel.classList.toggle("ai-glow", state === "thinking")
+        )
+    );
+    if (!spec.badge) return;
+    const badge = document.querySelector(spec.badge);
+    badge.classList.remove("hidden", "thinking", "done");
+    if (state === "thinking") {
+        badge.classList.add("thinking");
+        badge.textContent = "✦ AI refining…";
+    } else if (state === "done") {
+        badge.classList.add("done");
+        badge.textContent = "✦ AI enhanced";
+    } else {
+        badge.classList.add("hidden");
+        badge.textContent = "";
+    }
 }
 
+function clearAiStatus() {
+    Object.keys(AI_SECTIONS).forEach((section) => setSectionState(section, null));
+}
+
+// Fire one AI request per section in parallel; each panel updates as its
+// own answer arrives instead of everything waiting for the slowest.
 async function enhanceAdvice(data) {
     const token = ++enhanceToken;
     const playerOnBlue = data.teams.blue.some((m) => m.isPlayer);
     const myTeam = playerOnBlue ? data.teams.blue : data.teams.red;
     const enemyTeam = playerOnBlue ? data.teams.red : data.teams.blue;
 
-    setAiStatus("thinking");
-    try {
-        const response = await fetch("/api/enhance-advice", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                myChampion: data.player.champion,
-                enemyChampion: data.matchup.enemyChampion,
-                lane: data.matchup.lane,
-                myTeam: myTeam.map((m) => m.championName),
-                enemyTeam: enemyTeam.map((m) => m.championName),
-                queue: data.game && data.game.queue,
-                selectedRunes: data.runes,
-                advice: data.advice,
-            }),
-        });
-        const result = await response.json();
+    const base = {
+        myChampion: data.player.champion,
+        enemyChampion: data.matchup.enemyChampion,
+        lane: data.matchup.lane,
+        myTeam: myTeam.map((m) => m.championName),
+        enemyTeam: enemyTeam.map((m) => m.championName),
+        queue: data.game && data.game.queue,
+        selectedRunes: data.runes,
+        advice: data.advice,
+    };
 
-        // A newer analysis started while this one was in flight - discard.
-        if (token !== enhanceToken) return;
+    let anyEnhanced = false;
+    let anyCached = false;
+    const sections = Object.keys(AI_SECTIONS);
+    sections.forEach((section) => setSectionState(section, "thinking"));
 
-        if (result.ok && result.aiEnhanced) {
-            data.advice = result.advice;
-            const items = await loadItemIndex(data.ddragonVersion);
-            renderAdviceSections(result.advice, items, data.ddragonVersion);
-            setSourceNote(data, result.cached ? "cached" : "enhanced");
-            setAiStatus("done");
-        } else {
-            setAiStatus(null);
-        }
-    } catch (err) {
-        if (token === enhanceToken) setAiStatus(null);
+    await Promise.all(
+        sections.map(async (section) => {
+            try {
+                const response = await fetch("/api/enhance-advice", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ...base, section }),
+                });
+                const result = await response.json();
+
+                // A newer analysis started while this was in flight - discard.
+                if (token !== enhanceToken) return;
+
+                if (result.ok && result.aiEnhanced && result.delta) {
+                    const { extras, ...fields } = result.delta;
+                    Object.assign(data.advice, fields);
+                    if (extras) {
+                        data.advice.extras = { ...(data.advice.extras || {}), ...extras };
+                    }
+                    const items = await loadItemIndex(data.ddragonVersion);
+                    if (token !== enhanceToken) return;
+                    SECTION_RENDER[section](data.advice, items, data.ddragonVersion);
+                    anyEnhanced = true;
+                    if (result.cached) anyCached = true;
+                    setSectionState(section, "done");
+                } else {
+                    setSectionState(section, null);
+                }
+            } catch (err) {
+                if (token === enhanceToken) setSectionState(section, null);
+            }
+        })
+    );
+
+    if (token === enhanceToken && anyEnhanced) {
+        setSourceNote(data, anyCached ? "cached" : "enhanced");
     }
 }
 
@@ -950,16 +1002,10 @@ function extraCard(title, content, iconName, colorClass) {
     return card;
 }
 
-// Advice-driven sections, callable again when AI enhancement arrives.
-function renderAdviceSections(advice, items, version) {
+// Extra info grid: tiles cover resist/anti-heal/focus/threats, so this
+// holds the remaining cards plus the quick tips.
+function renderExtraCards(advice) {
     const extras = advice.extras || {};
-    renderFeatured(advice, extras);
-    renderTiles(extras);
-    renderBuild(advice, items, version);
-    renderLaneTips(advice);
-
-    // Extra info: tiles cover resist/anti-heal/focus/threats, so this grid
-    // holds the remaining cards plus the quick tips.
     const extraCards = document.getElementById("extra-cards");
     extraCards.replaceChildren();
     const cards = [
@@ -981,6 +1027,16 @@ function renderAdviceSections(advice, items, version) {
         tipsCard.classList.add("span-all");
         extraCards.appendChild(tipsCard);
     }
+}
+
+// Advice-driven sections, callable again when AI enhancement arrives.
+function renderAdviceSections(advice, items, version) {
+    const extras = advice.extras || {};
+    renderFeatured(advice, extras);
+    renderTiles(extras);
+    renderBuild(advice, items, version);
+    renderLaneTips(advice);
+    renderExtraCards(advice);
 }
 
 function setSourceNote(data, aiState) {

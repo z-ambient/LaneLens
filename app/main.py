@@ -21,7 +21,7 @@ from slowapi.util import get_remote_address
 
 from app import advice_cache, champions, matchup_history, runes
 from app.advice_engine import build_advice, build_team_notes
-from app.ai_agent import refine_advice_with_ai
+from app.ai_agent import CACHEABLE_SECTIONS, SECTION_SPECS, refine_advice_with_ai, refine_section
 from app.config import DEFAULT_PLATFORM, REGION_BY_PLATFORM, riot_key_present
 from app.demo import get_demo_response
 from app.lane_detection import assign_lanes, find_lane_opponent
@@ -273,23 +273,64 @@ class EnhanceRequest(BaseModel):
     queue: Optional[str] = None
     selectedRunes: Optional[dict] = None
     advice: dict
+    # One of app.ai_agent.SECTION_SPECS; omitted = legacy full refinement.
+    section: Optional[str] = None
 
 
 @app.post("/api/enhance-advice")
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 def enhance_advice(request: Request, body: EnhanceRequest):
     """Second phase of a progressive analysis: AI-refine the advice.
 
     Called by the frontend AFTER the instant deterministic result is already
-    on screen. Cached matchup advice (same champions + lane on the current
-    patch) is returned immediately with no AI call; otherwise the AI runs
-    once and its matchup-core output is cached for next time.
+    on screen - once per dashboard section, in parallel, so each panel
+    updates as its own answer lands. Matchup-specific sections (build, lane)
+    are cache-first per champion+enemy+lane+patch; team-dependent sections
+    (gameplan, extras) run fresh for every game.
     """
     if not body.enemyChampion:
+        if body.section:
+            return {"ok": True, "aiEnhanced": False, "cached": False,
+                    "section": body.section, "delta": {}}
         return {"ok": True, "aiEnhanced": False, "cached": False, "advice": body.advice}
 
     patch = champions.get_ddragon_version()
+    context = {
+        "myChampion": body.myChampion,
+        "enemyChampion": body.enemyChampion,
+        "lane": body.lane,
+        "myTeam": body.myTeam,
+        "enemyTeam": body.enemyTeam,
+        "queue": body.queue,
+        "selectedRunes": body.selectedRunes,
+    }
 
+    # ---- Per-section mode ----
+    if body.section:
+        if body.section not in SECTION_SPECS:
+            return error_response(400, "Unknown advice section.")
+
+        if body.section in CACHEABLE_SECTIONS:
+            cached = advice_cache.get_cached_section(
+                body.myChampion, body.enemyChampion, body.lane, patch, body.section
+            )
+            if cached:
+                return {"ok": True, "aiEnhanced": True, "cached": True,
+                        "section": body.section, "delta": cached}
+
+        delta = refine_section(context, body.advice, body.section)
+        if delta is None:
+            return {"ok": True, "aiEnhanced": False, "cached": False,
+                    "section": body.section, "delta": {}}
+
+        if body.section in CACHEABLE_SECTIONS:
+            advice_cache.store_section(
+                body.myChampion, body.enemyChampion, body.lane, patch, delta, body.section
+            )
+        return {"ok": True, "aiEnhanced": True, "cached": False,
+                "section": body.section, "delta": delta}
+
+    # ---- Legacy full mode ----
     cached = advice_cache.get_cached(body.myChampion, body.enemyChampion, body.lane, patch)
     if cached:
         return {
@@ -299,18 +340,7 @@ def enhance_advice(request: Request, body: EnhanceRequest):
             "advice": advice_cache.merge_cached(body.advice, cached),
         }
 
-    ai_advice = refine_advice_with_ai(
-        {
-            "myChampion": body.myChampion,
-            "enemyChampion": body.enemyChampion,
-            "lane": body.lane,
-            "myTeam": body.myTeam,
-            "enemyTeam": body.enemyTeam,
-            "queue": body.queue,
-            "selectedRunes": body.selectedRunes,
-        },
-        body.advice,
-    )
+    ai_advice = refine_advice_with_ai(context, body.advice)
     if ai_advice is None:
         return {"ok": True, "aiEnhanced": False, "cached": False, "advice": body.advice}
 

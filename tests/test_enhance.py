@@ -97,3 +97,76 @@ def test_no_enemy_skips_ai(monkeypatch):
     result = client.post("/api/enhance-advice", json=body).json()
     assert result["aiEnhanced"] is False
     assert called == []
+
+
+# ---------- Per-section mode ----------
+
+def _fake_section_ai(calls, deltas=None):
+    def fake(context, base, section):
+        calls.append(section)
+        if deltas and section in deltas:
+            return deltas[section]
+        return {"lanePlan": f"AI {section} plan"} if section == "lane" else {
+            "buildDirection": f"AI {section} direction"}
+    return fake
+
+
+def test_build_section_caches_and_reuses(monkeypatch):
+    calls = []
+    monkeypatch.setattr(main_module, "refine_section", _fake_section_ai(calls, {
+        "build": {"buildDirection": "AI build", "fullBuild": [
+            {"label": "Core", "item": "Sunfire Aegis", "options": []}]},
+    }))
+
+    first = client.post("/api/enhance-advice", json=dict(REQUEST, section="build")).json()
+    assert first["ok"] and first["aiEnhanced"] and first["cached"] is False
+    assert first["section"] == "build"
+    assert first["delta"]["buildDirection"] == "AI build"
+    assert calls == ["build"]
+
+    second = client.post("/api/enhance-advice", json=dict(REQUEST, section="build")).json()
+    assert second["cached"] is True
+    assert second["delta"]["buildDirection"] == "AI build"
+    assert calls == ["build"]  # no second AI call
+
+
+def test_gameplan_section_never_cached(monkeypatch):
+    calls = []
+    monkeypatch.setattr(main_module, "refine_section", _fake_section_ai(calls, {
+        "gameplan": {"gameDirection": "AI macro", "extras": {"winCondition": "AI win con"}},
+    }))
+    for _ in range(2):
+        result = client.post("/api/enhance-advice", json=dict(REQUEST, section="gameplan")).json()
+        assert result["aiEnhanced"] and result["cached"] is False
+        assert result["delta"]["extras"]["winCondition"] == "AI win con"
+    assert calls == ["gameplan", "gameplan"]
+
+
+def test_legacy_full_cache_serves_sections(monkeypatch):
+    """Old full-advice cache entries keep working for build/lane sections."""
+    import app.advice_cache as advice_cache
+    legacy_core = {field: f"legacy {field}" for field in advice_cache.CORE_FIELDS}
+    legacy_core["fullBuild"] = [{"label": "Core", "item": "Old Item", "options": []}]
+    legacy_core["extraTips"] = ["legacy tip"]
+    advice_cache.store("Malphite", "Sett", "Top", "99.1.1", legacy_core)
+
+    monkeypatch.setattr(main_module, "refine_section",
+                        lambda c, b, s: pytest.fail("AI should not be called"))
+    result = client.post("/api/enhance-advice", json=dict(REQUEST, section="lane")).json()
+    assert result["cached"] is True
+    assert result["delta"]["lanePlan"] == "legacy lanePlan"
+    assert result["delta"]["extraTips"] == ["legacy tip"]
+
+
+def test_unknown_section_rejected():
+    result = client.post("/api/enhance-advice", json=dict(REQUEST, section="nonsense"))
+    assert result.status_code == 400
+
+
+def test_section_with_no_enemy_returns_empty_delta(monkeypatch):
+    monkeypatch.setattr(main_module, "refine_section",
+                        lambda c, b, s: pytest.fail("AI should not be called"))
+    body = dict(REQUEST, enemyChampion=None, section="build")
+    result = client.post("/api/enhance-advice", json=body).json()
+    assert result["aiEnhanced"] is False
+    assert result["delta"] == {}

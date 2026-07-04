@@ -30,19 +30,17 @@ evolved from the original [LaneLens-Manual](https://github.com/z-ambient/LaneLen
    failure silently falls back to the deterministic advice.
 6. **Selected runes** — the player's rune page comes straight from the live
    game (Spectator perks), mapped to names and icons via Data Dragon.
-7. **Progressive AI loading with a persistent matchup cache** — the analysis
-   returns instantly with deterministic advice (~1s: just the two Riot
-   calls), then the frontend requests AI refinement in the background
-   (`POST /api/enhance-advice`) and the dashboard updates in place with an
-   "AI enhanced" badge. The AI's matchup-specific output is cached on disk
-   (`data/advice_cache.json`, keyed by champion + enemy + lane) and reused
-   until the game patch changes — Data Dragon's version acts as the
-   freshness check. The first time a matchup is analyzed the AI takes
-   ~30-60s in the background; **every later game with the same matchup gets
-   AI-quality advice in milliseconds**, so LaneLens gets faster the more
-   you use it. Team-dependent fields (win condition, biggest threats, who
-   to play around) are never cached — they are regenerated from the actual
-   teams in every game. Both this cache and the matchup history live in a
+7. **Progressive per-section AI with a persistent matchup cache** — the
+   analysis returns instantly with deterministic advice (~1s: just the two
+   Riot calls), then the frontend fires **four parallel AI requests**
+   (`POST /api/enhance-advice` with `section`: build / lane / gameplan /
+   extras). Each dashboard panel glows while its own request is in flight
+   and updates the moment its answer lands. Matchup-specific sections
+   (build, lane) are cached per champion + enemy + lane until the game
+   patch changes, so repeat matchups get them in milliseconds;
+   team-dependent sections (game plan, extras) run fresh for every game's
+   actual comps. Measured: old single call 30-60s; per-section, cached
+   panels land instantly and the slowest fresh section ~10s. Both this cache and the matchup history live in a
    database: a zero-config SQLite file locally, or Postgres in production
    via `DATABASE_URL` (legacy JSON stores are imported automatically on
    first run).

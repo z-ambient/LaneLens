@@ -39,6 +39,44 @@ def store(my_champion, enemy_champion, lane, patch, advice):
     storage.cache_set(_key(my_champion, enemy_champion, lane), patch, core)
 
 
+# ---------- Per-section caching (progressive per-tile updates) ----------
+
+SECTION_CACHE_FIELDS = {
+    "build": ["startingItem", "boots", "firstItem", "fullBuild", "buildDirection"],
+    "lane": ["lanePlan", "tradingPattern", "dangerWindows", "howToWinLane",
+             "commonMistakes", "extraTips"],
+}
+
+
+def get_cached_section(my_champion, enemy_champion, lane, patch, section):
+    """Cached delta for one section, falling back to legacy full entries."""
+    fields = SECTION_CACHE_FIELDS.get(section)
+    if not fields:
+        return None
+
+    hit = storage.cache_get(_key(my_champion, enemy_champion, lane) + "|s:" + section)
+    if hit and hit[0] == patch:
+        return hit[1]
+
+    # Older cache entries stored the whole core object under the plain key -
+    # serve the section's slice so pre-existing matchups stay instant.
+    legacy = storage.cache_get(_key(my_champion, enemy_champion, lane))
+    if legacy and legacy[0] == patch and all(field in legacy[1] for field in fields):
+        return {field: legacy[1][field] for field in fields}
+    return None
+
+
+def store_section(my_champion, enemy_champion, lane, patch, delta, section):
+    fields = SECTION_CACHE_FIELDS.get(section)
+    if not fields:
+        return
+    subset = {field: delta[field] for field in fields if field in delta}
+    if subset:
+        storage.cache_set(
+            _key(my_champion, enemy_champion, lane) + "|s:" + section, patch, subset
+        )
+
+
 def merge_cached(fresh_advice, cached_core):
     """Overlay cached matchup-core fields onto freshly generated advice.
 
