@@ -1672,7 +1672,30 @@ footer p { color: var(--muted-text); font-size: 0.72rem; }
 
 /* ---------- Matchup History tab ---------- */
 
-.history { display: grid; gap: 28px; padding-top: 6px; }
+.history { position: relative; display: grid; gap: 32px; padding-top: 6px; }
+
+/* Faded splash art of the most played champion behind the tab, fading out
+   toward the breakdown - same treatment as the overview card. */
+.history-splash {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 560px;
+    object-fit: cover;
+    object-position: center 20%;
+    opacity: 0.14;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 15%, transparent 92%);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 15%, transparent 92%);
+}
+
+/* Content renders above the splash. */
+.history > *:not(.history-splash) { position: relative; }
+
+/* The content sections (notes, summary tiles, filters, breakdown, detail)
+   stack with the same generous gap as the tab itself. */
+#history-content { display: grid; gap: 32px; }
 
 /* Without this, the breakdown table's intrinsic width would stop grid items
    shrinking and push the whole page wide - the table must scroll inside
@@ -1733,14 +1756,37 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
     gap: 14px;
 }
 
+/* Same gold accents as the matchup-overview tip cards: a gold gradient
+   top edge plus a gold border + lift on hover. */
 .hs-card {
+    position: relative;
+    overflow: hidden;
     background: linear-gradient(150deg, var(--panel-light), var(--panel));
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 16px 18px;
     display: grid;
-    gap: 4px;
-    align-content: start;
+    gap: 6px;
+    align-content: center;
+    justify-items: center;
+    text-align: center;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.hs-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold), transparent 70%);
+}
+
+.hs-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(200, 155, 60, 0.5);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
 }
 
 .hs-label {
@@ -1755,6 +1801,20 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .hs-sub { color: var(--muted-text); font-size: 0.76rem; }
 
+/* Win-rate donut: gold arc = games won. */
+.hs-rate { display: flex; align-items: center; justify-content: center; gap: 12px; }
+
+.hs-rate-value { font-size: 1.15rem; }
+
+/* Mirrored so the gold arc sweeps clockwise from 12 o'clock. */
+.hs-ring { width: 58px; height: 58px; transform: scaleX(-1); }
+
+.hs-ring circle { fill: none; stroke-width: 6; }
+
+.hs-ring-track { stroke: rgba(48, 68, 94, 0.9); }
+
+.hs-ring-fill { stroke: var(--gold); stroke-linecap: round; }
+
 /* Filters */
 
 .history-filters {
@@ -1762,6 +1822,9 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
     flex-wrap: wrap;
     gap: 14px 18px;
     padding: 18px 20px;
+    /* The filters belong to the breakdown below them: pull that section up
+       to half the standard 32px gap. */
+    margin-bottom: -16px;
 }
 
 .hf-field { display: grid; gap: 5px; flex: 1 1 130px; max-width: 200px; }
@@ -1787,6 +1850,35 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 /* Matchup breakdown table */
 
+/* Same gold accents as the summary tiles: a gradient top strip plus a
+   faint gold corner glow, so the panel doesn't sit flat on the page. */
+.history-table-card,
+.history-detail {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top left, rgba(200, 155, 60, 0.08), transparent 45%),
+        linear-gradient(150deg, var(--panel-light), var(--panel));
+}
+
+.history-table-card::before,
+.history-detail::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--gold), transparent 70%);
+}
+
+/* Section titles get a gold bar, nudging the text right off the edge. */
+.history-table-card h3,
+.history-detail-head h3 {
+    border-left: 3px solid var(--gold);
+    padding-left: 12px;
+}
+
 .history-table-scroll { overflow-x: auto; }
 
 .history-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
@@ -1798,9 +1890,12 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
     font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 1px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(200, 155, 60, 0.3);
     white-space: nowrap;
 }
+
+/* Subtle zebra striping so long tables stay scannable. */
+.history-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.02); }
 
 .history-table td {
     padding: 12px;
@@ -1824,14 +1919,22 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 .hm-champs { display: flex; align-items: center; gap: 8px; }
 
 /* In the breakdown table the matchup cell is a fixed three-column grid
-   (champion | vs | champion) so "vs" sits at the same spot on every row. */
+   (champion | vs | champion) so "vs" sits at the same spot on every row.
+   width:1% + nowrap collapses the column to this grid, keeping the
+   matchups hugging the left edge with the header centered above them. */
+.history-table th.col-matchup { width: 1%; text-align: center; }
+
 .history-table .hm-champs {
     display: grid;
-    grid-template-columns: 168px 34px 168px;
+    grid-template-columns: 140px 34px 140px;
     gap: 0;
 }
 
 .hm-side { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+/* My champion mirrors the enemy side (name, icon | vs | icon, name) so
+   "vs" sits visually centered between the two champions. */
+.hm-side.mine { flex-direction: row-reverse; }
 
 .hm-side .hm-name { overflow: hidden; text-overflow: ellipsis; }
 
@@ -1878,30 +1981,71 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .hm-actions { text-align: right; }
 
-/* Grade badges (colors per grade band; scale lives in app/lane_score.py) */
+/* Grade medallions: dark core, tier-colored ring and letter, soft glow.
+   Echoes LaneLens's ring motif (logo, difficulty dial, win-rate donut).
+   The scale itself lives in app/lane_score.py. */
 
 .grade-badge {
     display: inline-grid;
     place-items: center;
-    min-width: 30px;
-    padding: 3px 7px;
-    border-radius: 7px;
-    border: 1px solid;
-    font-size: 0.78rem;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--background);
+    color: var(--muted-text);
+    font-size: 0.82rem;
     font-weight: 800;
-    letter-spacing: 0.5px;
+    letter-spacing: 0;
 }
 
-.grade-badge.big { min-width: 44px; padding: 8px 10px; font-size: 1.05rem; border-radius: 10px; }
+.grade-badge.big { width: 60px; height: 60px; border-width: 3px; font-size: 1.45rem; }
 
-.grade-splus, .grade-s { color: var(--gold-light); border-color: var(--gold); background: rgba(200, 155, 60, 0.16); }
-.grade-splus { box-shadow: 0 0 12px rgba(200, 155, 60, 0.45); }
-.grade-a { color: #7ce0ac; border-color: rgba(76, 208, 141, 0.7); background: rgba(76, 208, 141, 0.12); }
-.grade-b { color: #8ed6ff; border-color: rgba(85, 199, 255, 0.65); background: rgba(85, 199, 255, 0.1); }
-.grade-c { color: #f3cf76; border-color: rgba(240, 192, 74, 0.65); background: rgba(240, 192, 74, 0.1); }
-.grade-d { color: #ffb27d; border-color: rgba(255, 159, 67, 0.65); background: rgba(255, 159, 67, 0.1); }
-.grade-f { color: #ff9c9c; border-color: rgba(255, 107, 107, 0.65); background: rgba(255, 107, 107, 0.12); }
-.grade-none { color: var(--muted-text); border-color: var(--border); background: transparent; }
+/* S tier is icy light blue; S+ burns brighter with an inner shimmer. */
+.grade-splus {
+    border-color: #a9edff;
+    color: #dcf8ff;
+    background: radial-gradient(circle, rgba(125, 231, 255, 0.26), rgba(125, 231, 255, 0.05) 70%), var(--background);
+    box-shadow: 0 0 16px rgba(125, 231, 255, 0.75), inset 0 0 9px rgba(125, 231, 255, 0.35);
+}
+.grade-s {
+    border-color: rgba(125, 231, 255, 0.9);
+    color: #b5efff;
+    background: radial-gradient(circle, rgba(125, 231, 255, 0.18), rgba(125, 231, 255, 0.03) 70%), var(--background);
+    box-shadow: 0 0 12px rgba(125, 231, 255, 0.45);
+}
+.grade-a {
+    border-color: rgba(76, 208, 141, 0.85);
+    color: #7ce0ac;
+    background: radial-gradient(circle, rgba(76, 208, 141, 0.16), rgba(76, 208, 141, 0.03) 70%), var(--background);
+    box-shadow: 0 0 8px rgba(76, 208, 141, 0.3);
+}
+/* B sits between A (green) and C (amber) on the color ramp: yellow-green. */
+.grade-b {
+    border-color: rgba(170, 214, 92, 0.85);
+    color: #cde9a0;
+    background: radial-gradient(circle, rgba(170, 214, 92, 0.14), rgba(170, 214, 92, 0.03) 70%), var(--background);
+    box-shadow: 0 0 8px rgba(170, 214, 92, 0.25);
+}
+.grade-c {
+    border-color: rgba(240, 192, 74, 0.8);
+    color: #f3cf76;
+    background: radial-gradient(circle, rgba(240, 192, 74, 0.14), rgba(240, 192, 74, 0.03) 70%), var(--background);
+    box-shadow: 0 0 8px rgba(240, 192, 74, 0.22);
+}
+.grade-d {
+    border-color: rgba(255, 159, 67, 0.8);
+    color: #ffb27d;
+    background: radial-gradient(circle, rgba(255, 159, 67, 0.14), rgba(255, 159, 67, 0.03) 70%), var(--background);
+    box-shadow: 0 0 8px rgba(255, 159, 67, 0.22);
+}
+.grade-f {
+    border-color: rgba(255, 107, 107, 0.85);
+    color: #ff9c9c;
+    background: radial-gradient(circle, rgba(255, 107, 107, 0.16), rgba(255, 107, 107, 0.03) 70%), var(--background);
+    box-shadow: 0 0 8px rgba(255, 107, 107, 0.3);
+}
+.grade-none { border-style: dashed; }
 
 /* Per-game detail */
 
@@ -1917,23 +2061,64 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .history-games { display: grid; gap: 16px; margin-top: 16px; }
 
+/* Per-game cards: same panel language as the rest of the tab (gradient,
+   gold hover lift). The result reads from the Victory/Defeat pill plus a
+   faint corner wash - no colored edge strips. */
 .hgame {
+    background: linear-gradient(150deg, var(--panel-light), var(--panel));
     border: 1px solid var(--card-border);
-    border-left: 3px solid var(--easy);
-    border-radius: 10px;
-    background: var(--card);
-    padding: 12px 16px;
+    border-radius: 12px;
+    padding: 14px 18px;
     display: grid;
     gap: 10px;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.hgame.is-loss { border-left-color: var(--hard); }
+.hgame:hover {
+    transform: translateY(-2px);
+    border-color: rgba(200, 155, 60, 0.5);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
 
-.hg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+/* The wash sits top-left, right under the Victory/Defeat pill. */
+.hgame.is-win {
+    background:
+        radial-gradient(circle at top left, rgba(76, 208, 141, 0.13), transparent 46%),
+        linear-gradient(150deg, var(--panel-light), var(--panel));
+}
 
-.hg-head .hm-champs img { width: 34px; height: 34px; }
+.hgame.is-loss {
+    background:
+        radial-gradient(circle at top left, rgba(255, 107, 107, 0.13), transparent 46%),
+        linear-gradient(150deg, var(--panel-light), var(--panel));
+}
 
-.hg-meta { display: flex; align-items: center; gap: 10px; }
+.hg-top { display: flex; align-items: center; gap: 12px; }
+
+/* Fixed columns shared by every card, so matchup, stats, and grade line
+   up vertically from game to game. */
+.hg-main {
+    display: grid;
+    grid-template-columns: 314px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 20px;
+}
+
+.hg-main .hm-champs {
+    display: grid;
+    grid-template-columns: 140px 34px 140px;
+    gap: 0;
+}
+
+.hg-main .hm-vs { text-align: center; }
+
+.hg-main .hm-champs img { width: 34px; height: 34px; }
+
+/* Narrow screens: let the columns wrap instead of squeezing. */
+@media (max-width: 980px) {
+    .hg-main { display: flex; flex-wrap: wrap; }
+    .hg-main .hm-champs { display: flex; }
+}
 
 .hg-result {
     padding: 3px 10px;
@@ -1950,9 +2135,16 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .hg-when { color: var(--muted-text); font-size: 0.78rem; }
 
-.hg-body { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+/* Right edge of the card: text first, emblem outermost. */
+.hg-grade {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 12px;
+    justify-self: end;
+}
 
-.hg-grade { display: flex; align-items: center; gap: 10px; }
+.hg-grade .hg-grade-meta { text-align: right; justify-items: end; }
 
 .hg-grade-meta { display: grid; gap: 1px; }
 
@@ -1960,7 +2152,14 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .hg-grade-label { color: var(--muted-text); font-size: 0.76rem; }
 
-.hg-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+/* Vertical divider separates the numbers from the matchup. */
+.hg-stats {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    padding-left: 22px;
+    border-left: 1px solid var(--border);
+}
 
 .hg-stat { display: grid; gap: 1px; }
 
@@ -1974,7 +2173,13 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .hg-stat-value { font-size: 0.9rem; font-weight: bold; font-variant-numeric: tabular-nums; }
 
-.hg-enemy-line { margin: 0; color: var(--muted-text); font-size: 0.8rem; }
+.hg-enemy-line {
+    margin: 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(48, 68, 94, 0.45);
+    color: var(--muted-text);
+    font-size: 0.8rem;
+}
 
 .hg-summary {
     margin: 0;

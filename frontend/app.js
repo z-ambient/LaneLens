@@ -609,12 +609,13 @@ function demoHistoryGames() {
         game(6, "Malphite", "Sett", false, 55, [2, 4, 7, 168, 10200, 9800], [4, 3, 5, 181, 11600, 17300]),
         game(8, "Malphite", "Darius", false, 44, [1, 5, 4, 150, 9100, 8400], [6, 2, 3, 195, 12800, 19000],
             "Darius controlled the bush and forced trades with ghost up. Respect level 1-3 and farm with Q."),
-        game(9, "Garen", "Teemo", true, 78, [4, 2, 6, 176, 11500, 15800], [3, 4, 4, 162, 10300, 15200]),
+        game(9, "Garen", "Teemo", true, 90, [7, 1, 6, 192, 12700, 18900], [2, 5, 3, 154, 9700, 13600]),
         game(12, "Malphite", "Sett", true, 72, [3, 3, 8, 172, 11000, 12100], [3, 3, 4, 175, 11000, 16000]),
         game(15, "Malphite", "Darius", true, 66, [2, 3, 9, 161, 10400, 10600], [3, 2, 5, 178, 11400, 15400]),
         game(18, "Garen", "Sett", true, 82, [7, 2, 3, 190, 12600, 18700], [3, 5, 2, 165, 10200, 15900]),
         game(21, "Malphite", "Sett", false, 47, [1, 5, 5, 149, 9200, 8100], [7, 2, 4, 188, 12500, 18600]),
-        game(24, "Garen", "Teemo", true, 88, [8, 1, 5, 195, 13100, 20300], [1, 6, 3, 150, 9100, 12800]),
+        game(24, "Garen", "Teemo", true, 96, [12, 0, 6, 216, 14600, 24100], [1, 8, 2, 139, 8500, 11200],
+            "Total lane control — you denied CS, dodged every blind, and turned the lead into two towers."),
         game(27, "Malphite", "Fiora", false, 52, [2, 4, 6, 158, 9800, 9200], [5, 3, 4, 186, 12100, 17800]),
         game(29, "Malphite", "Sett", true, 76, [3, 2, 10, 178, 11300, 12800], [2, 4, 6, 170, 10700, 15100]),
     ];
@@ -645,6 +646,23 @@ function historyShowState(id) {
     HISTORY_STATES.forEach((state) =>
         document.getElementById(state).classList.toggle("hidden", state !== id)
     );
+    // The champion splash belongs to the content view only.
+    if (id !== "history-content") setHistorySplash(null);
+}
+
+// Faded splash art of the most played champion behind the tab (like the
+// overview card's champion splash).
+function setHistorySplash(games) {
+    const splash = document.getElementById("history-splash");
+    if (!games || !games.length) {
+        splash.classList.add("hidden");
+        splash.removeAttribute("src");
+        return;
+    }
+    const most = mostCommon(games.map((g) => g.myChampion)).name;
+    splash.onerror = () => splash.classList.add("hidden");
+    splash.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${most}_0.jpg`;
+    splash.classList.remove("hidden");
 }
 
 function renderHistoryTab() {
@@ -822,6 +840,7 @@ async function renderHistoryContent(games, isDemo) {
     document.getElementById("history-demo-note").classList.toggle("hidden", !isDemo);
     document.getElementById("history-stale-note").classList.toggle("hidden", isDemo || !historyStale);
 
+    setHistorySplash(games);
     populateHistoryChampFilters(games);
     renderHistorySummary(games);
 
@@ -847,6 +866,33 @@ function summaryCard(label, value, sub) {
     return card;
 }
 
+// Small donut: the gold arc is the share of games won.
+function winRateRing(ratio) {
+    const ns = "http://www.w3.org/2000/svg";
+    const circumference = 2 * Math.PI * 24;
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 60 60");
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("hs-ring");
+
+    const track = document.createElementNS(ns, "circle");
+    track.setAttribute("cx", "30");
+    track.setAttribute("cy", "30");
+    track.setAttribute("r", "24");
+    track.classList.add("hs-ring-track");
+    svg.appendChild(track);
+
+    const fill = document.createElementNS(ns, "circle");
+    fill.setAttribute("cx", "30");
+    fill.setAttribute("cy", "30");
+    fill.setAttribute("r", "24");
+    fill.setAttribute("stroke-dasharray", `${circumference * ratio} ${circumference}`);
+    fill.setAttribute("transform", "rotate(-90 30 30)"); // start at 12 o'clock
+    fill.classList.add("hs-ring-fill");
+    svg.appendChild(fill);
+    return svg;
+}
+
 function mostCommon(names) {
     const counts = new Map();
     names.forEach((name) => counts.set(name, (counts.get(name) || 0) + 1));
@@ -864,7 +910,12 @@ function renderHistorySummary(games) {
 
     const wins = games.filter((g) => g.win).length;
     summary.appendChild(summaryCard("Tracked games", String(games.length), `${wins}W – ${games.length - wins}L`));
-    summary.appendChild(summaryCard("Overall win rate", fmtPercent(wins / games.length)));
+
+    const rate = wins / games.length;
+    const rateWrap = el("div", "hs-rate");
+    rateWrap.appendChild(winRateRing(rate));
+    rateWrap.appendChild(el("span", "hs-rate-value", fmtPercent(rate)));
+    summary.appendChild(summaryCard("Overall win rate", rateWrap, `${wins} of ${games.length} games won`));
 
     // Best/worst need 2+ meetings so one lucky game doesn't crown a matchup.
     const rows = groupMatchups(games).filter((row) => row.games.length >= 2);
@@ -889,17 +940,18 @@ function renderHistorySummary(games) {
     }
 }
 
-function champSide(name, version, size) {
-    const side = el("span", "hm-side");
+function champSide(name, version, size, extraClass) {
+    const side = el("span", "hm-side" + (extraClass ? " " + extraClass : ""));
     side.appendChild(champIcon(name, version, size));
     side.appendChild(el("span", "hm-name", name));
     return side;
 }
 
 // Works for both matchup rows and game cards ({myChampion, enemyChampion}).
+// My side is mirrored (.mine) so "vs" sits centered between the champions.
 function matchupCell(row, version, size) {
     const cell = el("div", "hm-champs");
-    cell.appendChild(champSide(row.myChampion, version, size || 28));
+    cell.appendChild(champSide(row.myChampion, version, size || 28, "mine"));
     cell.appendChild(el("span", "hm-vs", "vs"));
     cell.appendChild(champSide(row.enemyChampion, version, size || 28));
     return cell;
@@ -966,25 +1018,16 @@ function statBlock(label, value) {
 function historyGameCard(game, version) {
     const card = el("div", "hgame " + (game.win ? "is-win" : "is-loss"));
 
-    const head = el("div", "hg-head");
-    head.appendChild(matchupCell(game, version, 34));
+    // Result + date lead from the top-left, over the matching color wash.
+    const top = el("div", "hg-top");
+    top.appendChild(el("span", "hg-result " + (game.win ? "is-win" : "is-loss"), game.win ? "Victory" : "Defeat"));
+    top.appendChild(el("span", "hg-when", fmtWhen(game.endedAt)));
+    card.appendChild(top);
 
-    const meta = el("div", "hg-meta");
-    meta.appendChild(el("span", "hg-result " + (game.win ? "is-win" : "is-loss"), game.win ? "Victory" : "Defeat"));
-    meta.appendChild(el("span", "hg-when", fmtWhen(game.endedAt)));
-    head.appendChild(meta);
-    card.appendChild(head);
+    // Aligned columns (same widths on every card): matchup | stats | grade.
+    const main = el("div", "hg-main");
 
-    const body = el("div", "hg-body");
-
-    const gradeWrap = el("div", "hg-grade");
-    gradeWrap.appendChild(gradeBadge(game.laneGrade, true));
-    const gradeMeta = el("div", "hg-grade-meta");
-    gradeMeta.appendChild(el("span", "hg-score",
-        game.laneScore == null ? "No stats stored" : `Lane score ${game.laneScore} / 100`));
-    if (game.gradeLabel) gradeMeta.appendChild(el("span", "hg-grade-label", game.gradeLabel));
-    gradeWrap.appendChild(gradeMeta);
-    body.appendChild(gradeWrap);
+    main.appendChild(matchupCell(game, version, 34));
 
     if (game.laneScore != null) {
         const stats = el("div", "hg-stats");
@@ -992,9 +1035,20 @@ function historyGameCard(game, version) {
         stats.appendChild(statBlock("CS", String(game.cs)));
         stats.appendChild(statBlock("Gold", fmtThousands(game.gold)));
         stats.appendChild(statBlock("Damage", fmtThousands(game.damage)));
-        body.appendChild(stats);
+        main.appendChild(stats);
     }
-    card.appendChild(body);
+
+    // Grade rides the right edge: score/label first, emblem outermost.
+    const gradeWrap = el("div", "hg-grade");
+    gradeWrap.appendChild(gradeBadge(game.laneGrade, true));
+    const gradeMeta = el("div", "hg-grade-meta");
+    gradeMeta.appendChild(el("span", "hg-score",
+        game.laneScore == null ? "No stats stored" : `${game.laneScore} / 100`));
+    if (game.gradeLabel) gradeMeta.appendChild(el("span", "hg-grade-label", game.gradeLabel));
+    gradeWrap.appendChild(gradeMeta);
+    main.appendChild(gradeWrap);
+
+    card.appendChild(main);
 
     if (game.enemyKills != null) {
         card.appendChild(el("p", "hg-enemy-line",
