@@ -1672,7 +1672,7 @@ footer p { color: var(--muted-text); font-size: 0.72rem; }
 
 /* ---------- Matchup History tab ---------- */
 
-.history { display: grid; gap: 16px; padding-top: 6px; }
+.history { display: grid; gap: 28px; padding-top: 6px; }
 
 /* Without this, the breakdown table's intrinsic width would stop grid items
    shrinking and push the whole page wide - the table must scroll inside
@@ -1730,14 +1730,14 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 .history-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 12px;
+    gap: 14px;
 }
 
 .hs-card {
     background: linear-gradient(150deg, var(--panel-light), var(--panel));
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 14px 16px;
+    padding: 16px 18px;
     display: grid;
     gap: 4px;
     align-content: start;
@@ -1760,8 +1760,8 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 .history-filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px 16px;
-    padding: 14px 16px;
+    gap: 14px 18px;
+    padding: 18px 20px;
 }
 
 .hf-field { display: grid; gap: 5px; flex: 1 1 130px; max-width: 200px; }
@@ -1793,7 +1793,7 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .history-table th {
     text-align: left;
-    padding: 8px 10px;
+    padding: 10px 12px;
     color: var(--muted-text);
     font-size: 0.68rem;
     text-transform: uppercase;
@@ -1803,11 +1803,18 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 }
 
 .history-table td {
-    padding: 10px;
+    padding: 12px;
     border-bottom: 1px solid rgba(48, 68, 94, 0.45);
     vertical-align: middle;
     white-space: nowrap;
 }
+
+/* Numeric/badge columns center under their headers so the grid reads
+   as columns, not a loose pile of left-aligned text. */
+.history-table th.col-c,
+.history-table td.hm-num,
+.history-table td.hm-grade-cell,
+.history-table td.hm-rate { text-align: center; }
 
 .history-table tbody tr { cursor: pointer; transition: background 0.15s ease; }
 .history-table tbody tr:hover { background: rgba(200, 155, 60, 0.07); }
@@ -1815,6 +1822,20 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 .history-table tbody tr:last-child td { border-bottom: none; }
 
 .hm-champs { display: flex; align-items: center; gap: 8px; }
+
+/* In the breakdown table the matchup cell is a fixed three-column grid
+   (champion | vs | champion) so "vs" sits at the same spot on every row. */
+.history-table .hm-champs {
+    display: grid;
+    grid-template-columns: 168px 34px 168px;
+    gap: 0;
+}
+
+.hm-side { display: flex; align-items: center; gap: 8px; min-width: 0; }
+
+.hm-side .hm-name { overflow: hidden; text-overflow: ellipsis; }
+
+.history-table .hm-vs { text-align: center; }
 
 .hm-champs img {
     width: 28px;
@@ -1845,7 +1866,7 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .hm-bar {
     display: block;
-    margin-top: 4px;
+    margin: 4px auto 0;
     width: 84px;
     height: 4px;
     border-radius: 999px;
@@ -1884,10 +1905,17 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 /* Per-game detail */
 
-.history-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.history-detail-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
 .history-detail-head h3 { margin: 0; }
 
-.history-games { display: grid; gap: 12px; margin-top: 14px; }
+.history-games { display: grid; gap: 16px; margin-top: 16px; }
 
 .hgame {
     border: 1px solid var(--card-border);

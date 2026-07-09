@@ -889,13 +889,19 @@ function renderHistorySummary(games) {
     }
 }
 
-function matchupCell(row, version) {
+function champSide(name, version, size) {
+    const side = el("span", "hm-side");
+    side.appendChild(champIcon(name, version, size));
+    side.appendChild(el("span", "hm-name", name));
+    return side;
+}
+
+// Works for both matchup rows and game cards ({myChampion, enemyChampion}).
+function matchupCell(row, version, size) {
     const cell = el("div", "hm-champs");
-    cell.appendChild(champIcon(row.myChampion, version, 28));
-    cell.appendChild(el("span", "hm-name", row.myChampion));
+    cell.appendChild(champSide(row.myChampion, version, size || 28));
     cell.appendChild(el("span", "hm-vs", "vs"));
-    cell.appendChild(champIcon(row.enemyChampion, version, 28));
-    cell.appendChild(el("span", "hm-name", row.enemyChampion));
+    cell.appendChild(champSide(row.enemyChampion, version, size || 28));
     return cell;
 }
 
@@ -924,7 +930,7 @@ function renderHistoryTable(rows, version) {
         rate.appendChild(bar);
         tr.appendChild(rate);
 
-        const grade = el("td");
+        const grade = el("td", "hm-grade-cell");
         grade.appendChild(gradeBadge(row.avgGrade));
         tr.appendChild(grade);
 
@@ -961,13 +967,7 @@ function historyGameCard(game, version) {
     const card = el("div", "hgame " + (game.win ? "is-win" : "is-loss"));
 
     const head = el("div", "hg-head");
-    const champs = el("div", "hm-champs");
-    champs.appendChild(champIcon(game.myChampion, version, 34));
-    champs.appendChild(el("span", "hm-name", game.myChampion));
-    champs.appendChild(el("span", "hm-vs", "vs"));
-    champs.appendChild(champIcon(game.enemyChampion, version, 34));
-    champs.appendChild(el("span", "hm-name", game.enemyChampion));
-    head.appendChild(champs);
+    head.appendChild(matchupCell(game, version, 34));
 
     const meta = el("div", "hg-meta");
     meta.appendChild(el("span", "hg-result " + (game.win ? "is-win" : "is-loss"), game.win ? "Victory" : "Defeat"));
