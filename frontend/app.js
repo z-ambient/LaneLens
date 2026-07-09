@@ -55,6 +55,7 @@ function goHome() {
     document.body.classList.add("is-home");
     document.getElementById("home").classList.remove("hidden");
     hideSettings();
+    hideHistory();
     renderProfileArea();
     window.scrollTo({ top: 0, behavior: "instant" });
 }
@@ -81,12 +82,14 @@ function leaveHome() {
 // ---------- Settings view ----------
 
 function setRailActive(view) {
-    document.getElementById("rail-home").classList.toggle("active", view !== "settings");
+    document.getElementById("rail-home").classList.toggle("active", view !== "settings" && view !== "history");
+    document.getElementById("rail-history").classList.toggle("active", view === "history");
     document.getElementById("rail-settings").classList.toggle("active", view === "settings");
 }
 
 function showSettings() {
     leaveHome();
+    hideHistory();
     dashboard.classList.add("hidden");
     document.getElementById("loading").classList.add("hidden");
     errorPanel.classList.add("hidden");
@@ -168,6 +171,12 @@ function renderAccountArea() {
             } catch (err) { /* signing out is best-effort */ }
             currentUser = null;
             renderAccountArea();
+            // Matchup history is account data: drop it and lock the tab.
+            historyGames = null;
+            historySelected = null;
+            if (!document.getElementById("history").classList.contains("hidden")) {
+                renderHistoryTab();
+            }
         });
 
         menu.append(settingsItem, signOutItem);
@@ -292,6 +301,7 @@ function startLoading() {
     enhanceToken++; // invalidate any in-flight AI enhancement
     clearAiStatus();
     hideSettings();
+    hideHistory();
     errorPanel.classList.add("hidden");
     document.getElementById("no-game").classList.add("hidden");
     dashboard.classList.add("hidden");
@@ -507,6 +517,511 @@ async function fetchMatchupHistory(data) {
     } catch (err) {
         /* history is optional - stay hidden on failure */
     }
+}
+
+// ---------- Matchup History tab ----------
+// Data comes from GET /api/my/matchup-history (session cookie = the only
+// credential). Every game already carries laneScore/laneGrade/gradeLabel,
+// computed server-side in app/lane_score.py - the ONLY place the scoring
+// math lives. The gradeForScore copy below exists solely to grade client-
+// side AVERAGES of those server scores (and the sample data).
+
+let mePromise = null;        // resolved /api/me check (auth state known)
+let historyGames = null;     // fetched games, newest first; null = not loaded
+let historyNeedsProfile = false;
+let historyStale = false;    // served from storage, Riot refresh failed
+let historyLoading = false;
+let historyDemoMode = false;
+let historySelected = null;  // "MyChampion|EnemyChampion" of the open detail
+
+const HISTORY_STATES = [
+    "history-locked", "history-no-profile", "history-loading",
+    "history-error", "history-empty", "history-content",
+];
+
+// Mirrors GRADE_THRESHOLDS in app/lane_score.py.
+function gradeForScore(score) {
+    if (score >= 95) return "S+";
+    if (score >= 90) return "S";
+    if (score >= 80) return "A";
+    if (score >= 70) return "B";
+    if (score >= 60) return "C";
+    if (score >= 50) return "D";
+    return "F";
+}
+
+const GRADE_CLASS = {
+    "S+": "grade-splus", "S": "grade-s", "A": "grade-a", "B": "grade-b",
+    "C": "grade-c", "D": "grade-d", "F": "grade-f",
+};
+
+function gradeBadge(grade, big) {
+    if (!grade) return el("span", "grade-badge grade-none" + (big ? " big" : ""), "—");
+    return el("span", "grade-badge " + (GRADE_CLASS[grade] || "grade-none") + (big ? " big" : ""), grade);
+}
+
+// Champion icons in this tab reuse the ddragon CDN (already CSP-whitelisted);
+// the current patch version is fetched once, lazily.
+let ddragonVersionPromise = null;
+
+function historyDdragonVersion() {
+    if (!ddragonVersionPromise) {
+        ddragonVersionPromise = fetch("https://ddragon.leagueoflegends.com/api/versions.json")
+            .then((response) => response.json())
+            .then((versions) => versions[0])
+            .catch(() => null);
+    }
+    return ddragonVersionPromise;
+}
+
+// ----- Sample data (the logged-out "preview" and a stand-in until real
+// games accumulate). Grades mirror what app/lane_score.py would produce.
+let demoHistoryCache = null;
+
+function demoHistoryGames() {
+    if (demoHistoryCache) return demoHistoryCache;
+    const day = 86400000;
+    const now = Date.now();
+    const game = (daysAgo, mine, enemy, win, score, mineStats, enemyStats, summary) => ({
+        matchId: `demo-${daysAgo}-${mine}-${enemy}`,
+        myChampion: mine, enemyChampion: enemy, position: "TOP",
+        win, endedAt: now - daysAgo * day, duration: 1860,
+        kills: mineStats[0], deaths: mineStats[1], assists: mineStats[2],
+        cs: mineStats[3], gold: mineStats[4], damage: mineStats[5],
+        teamKills: mineStats[0] + mineStats[2] + 8,
+        enemyKills: enemyStats[0], enemyDeaths: enemyStats[1], enemyAssists: enemyStats[2],
+        enemyCs: enemyStats[3], enemyGold: enemyStats[4], enemyDamage: enemyStats[5],
+        laneScore: score, laneGrade: gradeForScore(score),
+        gradeLabel: {
+            "S+": "Dominated matchup", "S": "Dominated matchup", "A": "Won lane",
+            "B": "Solid / even lane", "C": "Struggled but playable",
+            "D": "Lost lane", "F": "Lost lane hard",
+        }[gradeForScore(score)],
+        aiSummary: summary || null,
+    });
+    demoHistoryCache = [
+        game(1, "Malphite", "Sett", true, 84, [4, 2, 9, 184, 12400, 14200], [2, 4, 3, 160, 10100, 16800],
+            "You played the lane safely, avoided extended trades, and had strong teamfight impact after level 6."),
+        game(2, "Malphite", "Fiora", false, 38, [1, 6, 2, 142, 8900, 7600], [8, 1, 3, 210, 13600, 21500],
+            "Fiora punished every wave you stepped up to. Consider Bramble Vest first back and shorter trades."),
+        game(4, "Garen", "Teemo", true, 91, [9, 1, 4, 201, 13800, 22400], [2, 7, 2, 155, 9400, 14100],
+            "Excellent patience — you tracked Teemo's blind cooldown and only committed when it was down."),
+        game(6, "Malphite", "Sett", false, 55, [2, 4, 7, 168, 10200, 9800], [4, 3, 5, 181, 11600, 17300]),
+        game(8, "Malphite", "Darius", false, 44, [1, 5, 4, 150, 9100, 8400], [6, 2, 3, 195, 12800, 19000],
+            "Darius controlled the bush and forced trades with ghost up. Respect level 1-3 and farm with Q."),
+        game(9, "Garen", "Teemo", true, 78, [4, 2, 6, 176, 11500, 15800], [3, 4, 4, 162, 10300, 15200]),
+        game(12, "Malphite", "Sett", true, 72, [3, 3, 8, 172, 11000, 12100], [3, 3, 4, 175, 11000, 16000]),
+        game(15, "Malphite", "Darius", true, 66, [2, 3, 9, 161, 10400, 10600], [3, 2, 5, 178, 11400, 15400]),
+        game(18, "Garen", "Sett", true, 82, [7, 2, 3, 190, 12600, 18700], [3, 5, 2, 165, 10200, 15900]),
+        game(21, "Malphite", "Sett", false, 47, [1, 5, 5, 149, 9200, 8100], [7, 2, 4, 188, 12500, 18600]),
+        game(24, "Garen", "Teemo", true, 88, [8, 1, 5, 195, 13100, 20300], [1, 6, 3, 150, 9100, 12800]),
+        game(27, "Malphite", "Fiora", false, 52, [2, 4, 6, 158, 9800, 9200], [5, 3, 4, 186, 12100, 17800]),
+        game(29, "Malphite", "Sett", true, 76, [3, 2, 10, 178, 11300, 12800], [2, 4, 6, 170, 10700, 15100]),
+    ];
+    return demoHistoryCache;
+}
+
+// ----- View plumbing -----
+
+function hideHistory() {
+    document.getElementById("history").classList.add("hidden");
+}
+
+async function showHistory() {
+    leaveHome();
+    hideSettings();
+    dashboard.classList.add("hidden");
+    loadingPanel.classList.add("hidden");
+    errorPanel.classList.add("hidden");
+    document.getElementById("no-game").classList.add("hidden");
+    document.getElementById("history").classList.remove("hidden");
+    setRailActive("history");
+    window.scrollTo({ top: 0, behavior: "instant" });
+    if (mePromise) await mePromise; // auth state must be known before rendering
+    renderHistoryTab();
+}
+
+function historyShowState(id) {
+    HISTORY_STATES.forEach((state) =>
+        document.getElementById(state).classList.toggle("hidden", state !== id)
+    );
+}
+
+function renderHistoryTab() {
+    if (historyDemoMode) {
+        renderHistoryContent(demoHistoryGames(), true);
+        return;
+    }
+    if (!currentUser) {
+        historyShowState("history-locked");
+        document.getElementById("history-login").classList.toggle("hidden", !discordConfigured);
+        document.getElementById("history-login-note").classList.toggle("hidden", discordConfigured);
+        return;
+    }
+    if (historyGames === null) {
+        fetchMyHistory();
+        return;
+    }
+    if (historyNeedsProfile) {
+        historyShowState("history-no-profile");
+        return;
+    }
+    if (!historyGames.length) {
+        historyShowState("history-empty");
+        return;
+    }
+    renderHistoryContent(historyGames, false);
+}
+
+async function fetchMyHistory() {
+    if (historyLoading) return;
+    historyLoading = true;
+    historyShowState("history-loading");
+    try {
+        const response = await fetch("/api/my/matchup-history");
+        const data = await response.json().catch(() => null);
+        if (!data) throw new Error("unreadable");
+        if (!data.ok) {
+            if (response.status === 401) {
+                // Session expired since page load - fall back to the locked state.
+                currentUser = null;
+                renderAccountArea();
+                historyLoading = false;
+                renderHistoryTab();
+                return;
+            }
+            document.getElementById("history-error-text").textContent =
+                friendlyError(response.status, data.error);
+            historyShowState("history-error");
+            return;
+        }
+        historyGames = data.games || [];
+        historyNeedsProfile = !!data.needsProfile;
+        historyStale = data.refreshed === false;
+        historyLoading = false;
+        renderHistoryTab();
+        return;
+    } catch (err) {
+        document.getElementById("history-error-text").textContent =
+            "Could not reach the LaneLens backend. Make sure the server is running, then try again.";
+        historyShowState("history-error");
+    } finally {
+        historyLoading = false;
+    }
+}
+
+// ----- Filters, grouping, and math -----
+
+function historyFilterValues() {
+    return {
+        champ: document.getElementById("hf-champ").value,
+        enemy: document.getElementById("hf-enemy").value,
+        result: document.getElementById("hf-result").value,
+        grade: document.getElementById("hf-grade").value,
+        rangeDays: Number(document.getElementById("hf-range").value) || 0,
+        sort: document.getElementById("hf-sort").value,
+    };
+}
+
+function populateHistoryChampFilters(games) {
+    const fill = (id, names, label) => {
+        const select = document.getElementById(id);
+        const previous = select.value;
+        select.replaceChildren();
+        const all = el("option", null, label);
+        all.value = "";
+        select.appendChild(all);
+        [...names].sort().forEach((name) => {
+            const option = el("option", null, name);
+            option.value = name;
+            select.appendChild(option);
+        });
+        if ([...select.options].some((o) => o.value === previous)) select.value = previous;
+    };
+    fill("hf-champ", new Set(games.map((g) => g.myChampion)), "All champions");
+    fill("hf-enemy", new Set(games.map((g) => g.enemyChampion)), "All enemies");
+}
+
+function filteredHistoryGames(games) {
+    const f = historyFilterValues();
+    const cutoff = f.rangeDays ? Date.now() - f.rangeDays * 86400000 : null;
+    return games.filter((g) =>
+        (!f.champ || g.myChampion === f.champ) &&
+        (!f.enemy || g.enemyChampion === f.enemy) &&
+        (!f.result || (f.result === "win") === !!g.win) &&
+        (!f.grade || g.laneGrade === f.grade) &&
+        (!cutoff || (g.endedAt || 0) >= cutoff)
+    );
+}
+
+// One row per "my champion vs enemy champion" pair.
+function groupMatchups(games) {
+    const map = new Map();
+    for (const game of games) {
+        const key = game.myChampion + "|" + game.enemyChampion;
+        if (!map.has(key)) {
+            map.set(key, { key, myChampion: game.myChampion, enemyChampion: game.enemyChampion, games: [] });
+        }
+        map.get(key).games.push(game);
+    }
+    return [...map.values()].map((matchup) => {
+        const wins = matchup.games.filter((g) => g.win).length;
+        const scored = matchup.games.filter((g) => g.laneScore != null);
+        const avgScore = scored.length
+            ? Math.round(scored.reduce((sum, g) => sum + g.laneScore, 0) / scored.length)
+            : null;
+        return {
+            ...matchup,
+            wins,
+            losses: matchup.games.length - wins,
+            winRate: wins / matchup.games.length,
+            avgScore,
+            avgGrade: avgScore == null ? null : gradeForScore(avgScore),
+            lastPlayed: Math.max(...matchup.games.map((g) => g.endedAt || 0)),
+        };
+    });
+}
+
+function sortMatchupRows(rows, mode) {
+    const by = {
+        newest: (a, b) => b.lastPlayed - a.lastPlayed,
+        played: (a, b) => b.games.length - a.games.length || b.lastPlayed - a.lastPlayed,
+        winrate: (a, b) => b.winRate - a.winRate || b.games.length - a.games.length,
+        best: (a, b) => (b.avgScore ?? -1) - (a.avgScore ?? -1),
+        worst: (a, b) => (a.avgScore ?? 101) - (b.avgScore ?? 101),
+    };
+    return [...rows].sort(by[mode] || by.newest);
+}
+
+function fmtPercent(ratio) {
+    const value = ratio * 100;
+    return (Number.isInteger(value) ? value : value.toFixed(1)) + "%";
+}
+
+function fmtThousands(value) {
+    if (value == null) return "—";
+    return value >= 1000 ? (value / 1000).toFixed(1) + "k" : String(value);
+}
+
+function fmtWhen(timestamp) {
+    if (!timestamp) return "—";
+    const minutes = Math.floor((Date.now() - timestamp) / 60000);
+    if (minutes < 60) return "just now";
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return days === 1 ? "1 day ago" : `${days} days ago`;
+    const months = Math.floor(days / 30);
+    return months === 1 ? "1 month ago" : `${months} months ago`;
+}
+
+// ----- Renderers -----
+
+async function renderHistoryContent(games, isDemo) {
+    historyShowState("history-content");
+    document.getElementById("history-demo-note").classList.toggle("hidden", !isDemo);
+    document.getElementById("history-stale-note").classList.toggle("hidden", isDemo || !historyStale);
+
+    populateHistoryChampFilters(games);
+    renderHistorySummary(games);
+
+    const version = await historyDdragonVersion();
+    const filtered = filteredHistoryGames(games);
+    const rows = sortMatchupRows(groupMatchups(filtered), historyFilterValues().sort);
+
+    renderHistoryTable(rows, version);
+    renderHistoryDetail(rows, version);
+}
+
+function summaryCard(label, value, sub) {
+    const card = el("div", "hs-card");
+    card.appendChild(el("span", "hs-label", label));
+    if (value instanceof Node) {
+        const wrap = el("div", "hs-value");
+        wrap.appendChild(value);
+        card.appendChild(wrap);
+    } else {
+        card.appendChild(el("div", "hs-value", value));
+    }
+    if (sub) card.appendChild(el("span", "hs-sub", sub));
+    return card;
+}
+
+function mostCommon(names) {
+    const counts = new Map();
+    names.forEach((name) => counts.set(name, (counts.get(name) || 0) + 1));
+    let best = null;
+    for (const [name, count] of counts) {
+        if (!best || count > best.count) best = { name, count };
+    }
+    return best;
+}
+
+// Summary cards always cover ALL tracked games (filters only shape the table).
+function renderHistorySummary(games) {
+    const summary = document.getElementById("history-summary");
+    summary.replaceChildren();
+
+    const wins = games.filter((g) => g.win).length;
+    summary.appendChild(summaryCard("Tracked games", String(games.length), `${wins}W – ${games.length - wins}L`));
+    summary.appendChild(summaryCard("Overall win rate", fmtPercent(wins / games.length)));
+
+    // Best/worst need 2+ meetings so one lucky game doesn't crown a matchup.
+    const rows = groupMatchups(games).filter((row) => row.games.length >= 2);
+    if (rows.length) {
+        const best = sortMatchupRows(rows, "winrate")[0];
+        const worst = sortMatchupRows(rows, "winrate")[rows.length - 1];
+        summary.appendChild(summaryCard("Best matchup", `${best.myChampion} vs ${best.enemyChampion}`,
+            `${fmtPercent(best.winRate)} over ${best.games.length} games`));
+        summary.appendChild(summaryCard("Worst matchup", `${worst.myChampion} vs ${worst.enemyChampion}`,
+            `${fmtPercent(worst.winRate)} over ${worst.games.length} games`));
+    }
+
+    const played = mostCommon(games.map((g) => g.myChampion));
+    const enemy = mostCommon(games.map((g) => g.enemyChampion));
+    summary.appendChild(summaryCard("Most played champion", played.name, `${played.count} games`));
+    summary.appendChild(summaryCard("Most common enemy", enemy.name, `${enemy.count} meetings`));
+
+    const scored = games.filter((g) => g.laneScore != null);
+    if (scored.length) {
+        const avg = Math.round(scored.reduce((sum, g) => sum + g.laneScore, 0) / scored.length);
+        summary.appendChild(summaryCard("Average lane grade", gradeBadge(gradeForScore(avg), true), `score ${avg} / 100`));
+    }
+}
+
+function matchupCell(row, version) {
+    const cell = el("div", "hm-champs");
+    cell.appendChild(champIcon(row.myChampion, version, 28));
+    cell.appendChild(el("span", "hm-name", row.myChampion));
+    cell.appendChild(el("span", "hm-vs", "vs"));
+    cell.appendChild(champIcon(row.enemyChampion, version, 28));
+    cell.appendChild(el("span", "hm-name", row.enemyChampion));
+    return cell;
+}
+
+function renderHistoryTable(rows, version) {
+    const body = document.getElementById("history-rows");
+    body.replaceChildren();
+    document.getElementById("history-no-results").classList.toggle("hidden", rows.length > 0);
+
+    for (const row of rows) {
+        const tr = el("tr", row.key === historySelected ? "is-selected" : null);
+
+        const matchup = el("td");
+        matchup.appendChild(matchupCell(row, version));
+        tr.appendChild(matchup);
+
+        tr.appendChild(el("td", "hm-num", String(row.games.length)));
+        tr.appendChild(el("td", "hm-num hm-wins", String(row.wins)));
+        tr.appendChild(el("td", "hm-num hm-losses", String(row.losses)));
+
+        const rate = el("td", "hm-rate");
+        rate.appendChild(el("span", null, fmtPercent(row.winRate)));
+        const bar = el("span", "hm-bar");
+        const fill = el("span", "hm-bar-fill");
+        fill.style.width = Math.round(row.winRate * 100) + "%";
+        bar.appendChild(fill);
+        rate.appendChild(bar);
+        tr.appendChild(rate);
+
+        const grade = el("td");
+        grade.appendChild(gradeBadge(row.avgGrade));
+        tr.appendChild(grade);
+
+        tr.appendChild(el("td", "hm-num", row.avgScore == null ? "—" : String(row.avgScore)));
+        tr.appendChild(el("td", "hm-when", fmtWhen(row.lastPlayed)));
+
+        const actions = el("td", "hm-actions");
+        const view = el("button", "btn-ghost small", row.key === historySelected ? "Viewing" : "View games");
+        view.type = "button";
+        actions.appendChild(view);
+        tr.appendChild(actions);
+
+        tr.addEventListener("click", () => {
+            historySelected = row.key === historySelected ? null : row.key;
+            renderHistoryTab();
+            if (historySelected) {
+                setTimeout(() =>
+                    document.getElementById("history-detail")
+                        .scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+            }
+        });
+        body.appendChild(tr);
+    }
+}
+
+function statBlock(label, value) {
+    const block = el("div", "hg-stat");
+    block.appendChild(el("span", "hg-stat-label", label));
+    block.appendChild(el("span", "hg-stat-value", value));
+    return block;
+}
+
+function historyGameCard(game, version) {
+    const card = el("div", "hgame " + (game.win ? "is-win" : "is-loss"));
+
+    const head = el("div", "hg-head");
+    const champs = el("div", "hm-champs");
+    champs.appendChild(champIcon(game.myChampion, version, 34));
+    champs.appendChild(el("span", "hm-name", game.myChampion));
+    champs.appendChild(el("span", "hm-vs", "vs"));
+    champs.appendChild(champIcon(game.enemyChampion, version, 34));
+    champs.appendChild(el("span", "hm-name", game.enemyChampion));
+    head.appendChild(champs);
+
+    const meta = el("div", "hg-meta");
+    meta.appendChild(el("span", "hg-result " + (game.win ? "is-win" : "is-loss"), game.win ? "Victory" : "Defeat"));
+    meta.appendChild(el("span", "hg-when", fmtWhen(game.endedAt)));
+    head.appendChild(meta);
+    card.appendChild(head);
+
+    const body = el("div", "hg-body");
+
+    const gradeWrap = el("div", "hg-grade");
+    gradeWrap.appendChild(gradeBadge(game.laneGrade, true));
+    const gradeMeta = el("div", "hg-grade-meta");
+    gradeMeta.appendChild(el("span", "hg-score",
+        game.laneScore == null ? "No stats stored" : `Lane score ${game.laneScore} / 100`));
+    if (game.gradeLabel) gradeMeta.appendChild(el("span", "hg-grade-label", game.gradeLabel));
+    gradeWrap.appendChild(gradeMeta);
+    body.appendChild(gradeWrap);
+
+    if (game.laneScore != null) {
+        const stats = el("div", "hg-stats");
+        stats.appendChild(statBlock("KDA", `${game.kills} / ${game.deaths} / ${game.assists}`));
+        stats.appendChild(statBlock("CS", String(game.cs)));
+        stats.appendChild(statBlock("Gold", fmtThousands(game.gold)));
+        stats.appendChild(statBlock("Damage", fmtThousands(game.damage)));
+        body.appendChild(stats);
+    }
+    card.appendChild(body);
+
+    if (game.enemyKills != null) {
+        card.appendChild(el("p", "hg-enemy-line",
+            `${game.enemyChampion}: ${game.enemyKills} / ${game.enemyDeaths} / ${game.enemyAssists}` +
+            ` · ${game.enemyCs} CS · ${fmtThousands(game.enemyGold)} gold · ${fmtThousands(game.enemyDamage)} dmg`));
+    }
+    if (game.aiSummary) {
+        card.appendChild(el("p", "hg-summary", `“${game.aiSummary}”`));
+    }
+    return card;
+}
+
+function renderHistoryDetail(rows, version) {
+    const detail = document.getElementById("history-detail");
+    const row = rows.find((r) => r.key === historySelected);
+    if (!row) {
+        historySelected = null;
+        detail.classList.add("hidden");
+        return;
+    }
+    detail.classList.remove("hidden");
+    document.getElementById("history-detail-title").textContent =
+        `${row.myChampion} vs ${row.enemyChampion} — ${row.wins}W · ${row.losses}L`;
+
+    const list = document.getElementById("history-games");
+    list.replaceChildren();
+    row.games.forEach((game) => list.appendChild(historyGameCard(game, version)));
 }
 
 // ---------- Auto-detect: watch for the saved player's next game ----------
@@ -1252,6 +1767,7 @@ function setSourceNote(data, aiState) {
 async function renderDashboard(data) {
     leaveHome(); // auto-detect can land here without a loading phase
     hideSettings();
+    hideHistory();
     errorPanel.classList.add("hidden");
 
     const items = await loadItemIndex(data.ddragonVersion);
@@ -1368,6 +1884,31 @@ document.addEventListener("keydown", (event) => {
 document.getElementById("brand-home").addEventListener("click", goHome);
 document.getElementById("rail-home").addEventListener("click", goHome);
 document.getElementById("rail-settings").addEventListener("click", showSettings);
+document.getElementById("rail-history").addEventListener("click", showHistory);
+
+// Matchup History tab controls.
+document.getElementById("history-demo-btn").addEventListener("click", () => {
+    historyDemoMode = true;
+    historySelected = null;
+    renderHistoryTab();
+});
+document.getElementById("history-demo-exit").addEventListener("click", () => {
+    historyDemoMode = false;
+    historySelected = null;
+    renderHistoryTab();
+});
+document.getElementById("history-open-settings").addEventListener("click", showSettings);
+document.getElementById("history-retry").addEventListener("click", () => {
+    historyGames = null;
+    renderHistoryTab();
+});
+document.getElementById("history-detail-close").addEventListener("click", () => {
+    historySelected = null;
+    renderHistoryTab();
+});
+["hf-champ", "hf-enemy", "hf-result", "hf-grade", "hf-range", "hf-sort"].forEach((id) =>
+    document.getElementById(id).addEventListener("change", renderHistoryTab)
+);
 
 document.getElementById("settings-save").addEventListener("click", () => {
     const gameName = document.getElementById("settings-game-name").value.trim();
@@ -1392,4 +1933,4 @@ document.getElementById("settings-save").addEventListener("click", () => {
 renderProfileArea();
 syncWatch();
 goHome();
-fetchMe();
+mePromise = fetchMe();

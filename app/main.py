@@ -348,6 +348,58 @@ def get_matchup_history(request: Request, body: HistoryRequest):
     return {"ok": True, "record": record}
 
 
+# Same Riot-call budget as /api/matchup-history (1 account lookup + 1 id
+# list + up to 10 new match details), so the same tight limit.
+@app.get("/api/my/matchup-history")
+@limiter.limit("5/minute")
+def my_matchup_history(request: Request):
+    """The signed-in user's full lane-matchup history, scored per game.
+
+    Backs the Matchup History tab. The player is resolved from the
+    account's SAVED Riot profile - never from client input - so the
+    session cookie is the only thing this route trusts. Per-game scores
+    and grades come from app.lane_score.
+    """
+    user = auth.current_user(request)
+    if user is None:
+        return error_response(401, "Sign in to view your matchup history.")
+
+    profile = user.get("riotProfile")
+    if not profile:
+        # Signed in but no saved Riot ID yet - the frontend points at Settings.
+        return {"ok": True, "needsProfile": True, "games": []}
+
+    if not riot_key_present():
+        return error_response(503, "Match history is temporarily unavailable.")
+
+    platform = (profile.get("platform") or DEFAULT_PLATFORM).lower()
+    region = REGION_BY_PLATFORM.get(platform, "americas")
+    client = RiotClient()
+    try:
+        account = client.get_account_by_riot_id(
+            profile["gameName"], profile["tagLine"], region
+        )
+    except RiotApiError as error:
+        return error_response(error.status_code, error.message)
+    if account is None:
+        return error_response(
+            404, "Your saved Riot ID was not found. Update it in Settings."
+        )
+
+    snapshot = matchup_history.get_history_snapshot(client, account["puuid"], region)
+    return {
+        "ok": True,
+        "needsProfile": False,
+        "profile": {
+            "gameName": profile["gameName"],
+            "tagLine": profile["tagLine"],
+            "platform": platform,
+        },
+        "refreshed": snapshot["refreshed"],
+        "games": snapshot["games"],
+    }
+
+
 class EnhanceRequest(BaseModel):
     myChampion: ChampionName
     enemyChampion: Optional[ChampionName] = None

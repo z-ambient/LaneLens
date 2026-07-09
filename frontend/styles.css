@@ -1669,3 +1669,297 @@ main { padding: 18px 22px 34px; max-width: 1360px; width: 100%; margin: 0 auto; 
 
 footer { margin-top: 26px; text-align: center; }
 footer p { color: var(--muted-text); font-size: 0.72rem; }
+
+/* ---------- Matchup History tab ---------- */
+
+.history { display: grid; gap: 16px; padding-top: 6px; }
+
+/* Without this, the breakdown table's intrinsic width would stop grid items
+   shrinking and push the whole page wide - the table must scroll inside
+   .history-table-scroll instead. */
+.history > *, #history-content > * { min-width: 0; }
+
+.history-title h2 {
+    margin: 0 0 6px;
+    color: var(--gold-light);
+    font-family: "Cinzel", "Times New Roman", serif;
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.history-sub { margin: 0; color: var(--muted-text); font-size: 0.9rem; max-width: 640px; }
+
+/* Locked / loading / error / empty states */
+
+.history-state {
+    text-align: center;
+    padding: 46px 24px;
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+}
+
+.history-state h3 { margin: 0; font-size: 1.02rem; letter-spacing: 1px; }
+
+.history-state .spinner { margin: 0 auto; }
+
+.history-state-icon {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--gold);
+    background: rgba(200, 155, 60, 0.1);
+    border: 1px solid rgba(200, 155, 60, 0.4);
+}
+
+.history-state-icon svg { width: 22px; height: 22px; }
+
+.history-state-text { margin: 0; color: var(--muted-text); font-size: 0.9rem; max-width: 460px; }
+
+.history-state-hint { margin: 4px 0 0; color: var(--muted-text); font-size: 0.82rem; }
+
+a.history-login { text-decoration: none; display: inline-block; border-radius: 8px; }
+
+.history-note { margin: 0; color: var(--muted-text); font-size: 0.82rem; }
+
+/* Summary cards */
+
+.history-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+}
+
+.hs-card {
+    background: linear-gradient(150deg, var(--panel-light), var(--panel));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: grid;
+    gap: 4px;
+    align-content: start;
+}
+
+.hs-label {
+    color: var(--muted-text);
+    font-size: 0.68rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hs-value { color: var(--text); font-size: 1.05rem; font-weight: bold; line-height: 1.3; }
+
+.hs-sub { color: var(--muted-text); font-size: 0.76rem; }
+
+/* Filters */
+
+.history-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    padding: 14px 16px;
+}
+
+.hf-field { display: grid; gap: 5px; flex: 1 1 130px; max-width: 200px; }
+
+.hf-field label {
+    color: var(--gold-light);
+    font-size: 0.66rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hf-field select {
+    width: 100%;
+    padding: 8px 10px;
+    color: var(--text);
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.84rem;
+}
+
+/* Matchup breakdown table */
+
+.history-table-scroll { overflow-x: auto; }
+
+.history-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+
+.history-table th {
+    text-align: left;
+    padding: 8px 10px;
+    color: var(--muted-text);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.history-table td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(48, 68, 94, 0.45);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.history-table tbody tr { cursor: pointer; transition: background 0.15s ease; }
+.history-table tbody tr:hover { background: rgba(200, 155, 60, 0.07); }
+.history-table tbody tr.is-selected { background: rgba(200, 155, 60, 0.12); }
+.history-table tbody tr:last-child td { border-bottom: none; }
+
+.hm-champs { display: flex; align-items: center; gap: 8px; }
+
+.hm-champs img {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--background);
+    flex-shrink: 0;
+}
+
+.hm-name { font-weight: 600; }
+
+.hm-vs {
+    color: var(--gold);
+    font-size: 0.64rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hm-num { font-variant-numeric: tabular-nums; }
+.hm-wins { color: var(--easy); font-weight: bold; }
+.hm-losses { color: var(--hard); font-weight: bold; }
+.hm-when { color: var(--muted-text); font-size: 0.8rem; }
+
+.hm-rate { min-width: 110px; }
+.hm-rate > span:first-child { font-weight: bold; font-variant-numeric: tabular-nums; }
+
+.hm-bar {
+    display: block;
+    margin-top: 4px;
+    width: 84px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 107, 107, 0.35);
+    overflow: hidden;
+}
+
+.hm-bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--easy); }
+
+.hm-actions { text-align: right; }
+
+/* Grade badges (colors per grade band; scale lives in app/lane_score.py) */
+
+.grade-badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 30px;
+    padding: 3px 7px;
+    border-radius: 7px;
+    border: 1px solid;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.grade-badge.big { min-width: 44px; padding: 8px 10px; font-size: 1.05rem; border-radius: 10px; }
+
+.grade-splus, .grade-s { color: var(--gold-light); border-color: var(--gold); background: rgba(200, 155, 60, 0.16); }
+.grade-splus { box-shadow: 0 0 12px rgba(200, 155, 60, 0.45); }
+.grade-a { color: #7ce0ac; border-color: rgba(76, 208, 141, 0.7); background: rgba(76, 208, 141, 0.12); }
+.grade-b { color: #8ed6ff; border-color: rgba(85, 199, 255, 0.65); background: rgba(85, 199, 255, 0.1); }
+.grade-c { color: #f3cf76; border-color: rgba(240, 192, 74, 0.65); background: rgba(240, 192, 74, 0.1); }
+.grade-d { color: #ffb27d; border-color: rgba(255, 159, 67, 0.65); background: rgba(255, 159, 67, 0.1); }
+.grade-f { color: #ff9c9c; border-color: rgba(255, 107, 107, 0.65); background: rgba(255, 107, 107, 0.12); }
+.grade-none { color: var(--muted-text); border-color: var(--border); background: transparent; }
+
+/* Per-game detail */
+
+.history-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.history-detail-head h3 { margin: 0; }
+
+.history-games { display: grid; gap: 12px; margin-top: 14px; }
+
+.hgame {
+    border: 1px solid var(--card-border);
+    border-left: 3px solid var(--easy);
+    border-radius: 10px;
+    background: var(--card);
+    padding: 12px 16px;
+    display: grid;
+    gap: 10px;
+}
+
+.hgame.is-loss { border-left-color: var(--hard); }
+
+.hg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+.hg-head .hm-champs img { width: 34px; height: 34px; }
+
+.hg-meta { display: flex; align-items: center; gap: 10px; }
+
+.hg-result {
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hg-result.is-win { color: var(--easy); border-color: rgba(76, 208, 141, 0.6); background: rgba(76, 208, 141, 0.1); }
+.hg-result.is-loss { color: var(--hard); border-color: rgba(255, 107, 107, 0.6); background: rgba(255, 107, 107, 0.1); }
+
+.hg-when { color: var(--muted-text); font-size: 0.78rem; }
+
+.hg-body { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+
+.hg-grade { display: flex; align-items: center; gap: 10px; }
+
+.hg-grade-meta { display: grid; gap: 1px; }
+
+.hg-score { font-size: 0.84rem; font-weight: 600; }
+
+.hg-grade-label { color: var(--muted-text); font-size: 0.76rem; }
+
+.hg-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+
+.hg-stat { display: grid; gap: 1px; }
+
+.hg-stat-label {
+    color: var(--muted-text);
+    font-size: 0.64rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hg-stat-value { font-size: 0.9rem; font-weight: bold; font-variant-numeric: tabular-nums; }
+
+.hg-enemy-line { margin: 0; color: var(--muted-text); font-size: 0.8rem; }
+
+.hg-summary {
+    margin: 0;
+    padding: 10px 12px;
+    border-left: 2px solid var(--gold);
+    border-radius: 0 8px 8px 0;
+    background: rgba(200, 155, 60, 0.07);
+    color: var(--text);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+@media (max-width: 700px) {
+    .history-state { padding: 34px 16px; }
+    .hg-body { gap: 14px; }
+}

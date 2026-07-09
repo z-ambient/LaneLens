@@ -14,6 +14,14 @@ client = TestClient(app)
 VALID_PUUID = "x" * 78
 
 
+def _stats(kills, deaths, assists, cs, gold, damage):
+    return {
+        "kills": kills, "deaths": deaths, "assists": assists,
+        "totalMinionsKilled": cs - 8, "neutralMinionsKilled": 8,
+        "goldEarned": gold, "totalDamageDealtToChampions": damage,
+    }
+
+
 def _match(match_id, my_champ, enemy_champ, win, queue=420, duration=1800, position="TOP"):
     return {
         "metadata": {"matchId": match_id},
@@ -23,11 +31,17 @@ def _match(match_id, my_champ, enemy_champ, win, queue=420, duration=1800, posit
             "gameEndTimestamp": 1700000000000,
             "participants": [
                 {"puuid": "me", "teamId": 100, "teamPosition": position,
-                 "championName": my_champ, "win": win},
+                 "championName": my_champ, "win": win,
+                 **_stats(8, 2, 6, 220, 13000, 25000)},
+                {"puuid": "m2", "teamId": 100, "teamPosition": "JUNGLE",
+                 "championName": "Sejuani", "win": win,
+                 **_stats(3, 4, 11, 160, 10000, 12000)},
                 {"puuid": "e1", "teamId": 200, "teamPosition": position,
-                 "championName": enemy_champ, "win": not win},
+                 "championName": enemy_champ, "win": not win,
+                 **_stats(2, 5, 3, 170, 10000, 16000)},
                 {"puuid": "e2", "teamId": 200, "teamPosition": "JUNGLE",
-                 "championName": "LeeSin", "win": not win},
+                 "championName": "LeeSin", "win": not win,
+                 **_stats(4, 3, 5, 150, 9500, 11000)},
             ],
         },
     }
@@ -145,3 +159,85 @@ def test_known_player_row_still_written_and_updated():
     # A later fetch with no new games still updates the existing row.
     update_history(FakeClient({}), "me", "americas")
     assert storage.history_get("me")["processed"] == ["m1"]
+
+
+# ---------- Stat capture + the signed-in history tab endpoint ----------
+
+
+def test_stored_game_captures_lane_score_stats():
+    update_history(FakeClient({"m1": _match("m1", "Malphite", "Sett", True)}), "me", "americas")
+    game = storage.history_get("me")["games"][0]
+    assert game["kills"] == 8 and game["deaths"] == 2 and game["assists"] == 6
+    assert game["cs"] == 220 and game["gold"] == 13000 and game["damage"] == 25000
+    assert game["enemyKills"] == 2 and game["enemyCs"] == 170
+    assert game["enemyGold"] == 10000 and game["enemyDamage"] == 16000
+    assert game["teamKills"] == 11  # me (8) + my jungler (3)
+    assert game["duration"] == 1800
+
+
+class FakeAccountClient(FakeClient):
+    def __init__(self, matches, puuid=VALID_PUUID):
+        super().__init__(matches)
+        self.puuid = puuid
+
+    def get_account_by_riot_id(self, game_name, tag_line, region):
+        return {"puuid": self.puuid, "gameName": game_name, "tagLine": tag_line}
+
+
+def _signed_in_headers(with_profile=True):
+    """A real session row (hashed at rest) + user, no Discord mocking needed."""
+    import time
+
+    storage.user_upsert("42", "TestSummoner", None)
+    if with_profile:
+        storage.user_set_riot_profile("42", "Me", "NA1", "na1")
+    storage.session_create("test-token", "42", int(time.time()) + 3600)
+    return {"Cookie": "lanelens_session=test-token"}
+
+
+def test_my_history_requires_login():
+    assert client.get("/api/my/matchup-history").status_code == 401
+
+
+def test_my_history_without_saved_profile():
+    data = client.get("/api/my/matchup-history",
+                      headers=_signed_in_headers(with_profile=False)).json()
+    assert data["ok"] is True
+    assert data["needsProfile"] is True
+    assert data["games"] == []
+
+
+def test_my_history_returns_scored_games(monkeypatch):
+    match = _match("m1", "Malphite", "Sett", True)
+    match["info"]["participants"][0]["puuid"] = VALID_PUUID
+    monkeypatch.setattr(main_module, "RiotClient", lambda: FakeAccountClient({"m1": match}))
+    monkeypatch.setattr(main_module, "riot_key_present", lambda: True)
+
+    data = client.get("/api/my/matchup-history", headers=_signed_in_headers()).json()
+    assert data["ok"] is True and data["refreshed"] is True
+    assert data["profile"]["gameName"] == "Me"
+    game = data["games"][0]
+    assert game["myChampion"] == "Malphite" and game["enemyChampion"] == "Sett"
+    assert isinstance(game["laneScore"], int)
+    assert game["laneGrade"] in ("S+", "S", "A", "B", "C", "D", "F")
+    assert game["gradeLabel"]
+
+
+def test_my_history_serves_stored_games_when_riot_fails(monkeypatch):
+    # First call stores a game normally...
+    match = _match("m1", "Malphite", "Sett", True)
+    match["info"]["participants"][0]["puuid"] = VALID_PUUID
+    update_history(FakeAccountClient({"m1": match}), VALID_PUUID, "americas")
+
+    # ...then Riot starts failing mid-refresh: stored games still come back.
+    class BrokenClient(FakeAccountClient):
+        def get_match_ids(self, puuid, region, count=30):
+            raise RuntimeError("riot down")
+
+    monkeypatch.setattr(main_module, "RiotClient", lambda: BrokenClient({}))
+    monkeypatch.setattr(main_module, "riot_key_present", lambda: True)
+
+    data = client.get("/api/my/matchup-history", headers=_signed_in_headers()).json()
+    assert data["ok"] is True
+    assert data["refreshed"] is False
+    assert len(data["games"]) == 1

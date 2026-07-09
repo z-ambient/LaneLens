@@ -27,6 +27,13 @@
                     <path d="M9 22V12h6v10"></path>
                 </svg>
             </button>
+            <button type="button" id="rail-history" class="rail-icon" title="Matchup History">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+            </button>
             <button type="button" id="rail-settings" class="rail-icon" title="Player settings">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
@@ -181,6 +188,155 @@
                         <span id="settings-feedback" class="settings-feedback"></span>
                     </div>
                     <p id="settings-sync-note" class="settings-note"></p>
+                </div>
+            </section>
+
+            <!-- Matchup History tab -->
+            <section id="history" class="history hidden">
+                <div class="history-title">
+                    <h2>Matchup History</h2>
+                    <p class="history-sub">
+                        Which matchups do you win? Which champions beat you? Every tracked
+                        lane, graded — not just by whether the game was won.
+                    </p>
+                </div>
+
+                <!-- Logged out -->
+                <div id="history-locked" class="panel history-state hidden">
+                    <span class="history-state-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </span>
+                    <h3>Log in to view your matchup history.</h3>
+                    <p class="history-state-text">
+                        LaneLens builds a private record of your real lane matchups —
+                        win rates, lane grades, and how each game actually went.
+                    </p>
+                    <a id="history-login" class="btn-gold history-login" href="/auth/login">Log In</a>
+                    <p id="history-login-note" class="history-note hidden">
+                        Discord sign-in is not configured on this server.
+                    </p>
+                    <p class="history-state-hint">
+                        Just looking? <button type="button" id="history-demo-btn" class="link-btn">Preview with sample data</button>
+                    </p>
+                </div>
+
+                <!-- Signed in, but no saved Riot ID to look up games for -->
+                <div id="history-no-profile" class="panel history-state hidden">
+                    <h3>Save your Riot ID first</h3>
+                    <p class="history-state-text">
+                        LaneLens uses your saved Riot ID to find your games. Add it in
+                        Player Settings and your history starts building.
+                    </p>
+                    <button type="button" id="history-open-settings" class="btn-gold">Open Settings</button>
+                </div>
+
+                <!-- Loading / error / empty -->
+                <div id="history-loading" class="panel history-state hidden" aria-live="polite">
+                    <div class="spinner"></div>
+                    <p>Loading your matchup history…</p>
+                </div>
+                <div id="history-error" class="panel history-state hidden" aria-live="polite">
+                    <h3>Couldn't load your matchup history</h3>
+                    <p id="history-error-text" class="history-state-text"></p>
+                    <button type="button" id="history-retry" class="btn-ghost">Try again</button>
+                </div>
+                <div id="history-empty" class="panel history-state hidden">
+                    <h3>No matchup history yet.</h3>
+                    <p class="history-state-text">Analyze a live game to start building your matchup record.</p>
+                </div>
+
+                <!-- The real tab content -->
+                <div id="history-content" class="hidden">
+                    <p id="history-demo-note" class="history-note hidden">
+                        Sample data — log in to see your own games.
+                        <button type="button" id="history-demo-exit" class="link-btn">Exit preview</button>
+                    </p>
+                    <p id="history-stale-note" class="history-note hidden">
+                        Couldn't refresh from Riot just now — showing your stored games.
+                    </p>
+
+                    <div id="history-summary" class="history-summary"></div>
+
+                    <div class="panel history-filters">
+                        <div class="hf-field">
+                            <label for="hf-champ">My champion</label>
+                            <select id="hf-champ"></select>
+                        </div>
+                        <div class="hf-field">
+                            <label for="hf-enemy">Enemy champion</label>
+                            <select id="hf-enemy"></select>
+                        </div>
+                        <div class="hf-field">
+                            <label for="hf-result">Result</label>
+                            <select id="hf-result">
+                                <option value="">All</option>
+                                <option value="win">Wins</option>
+                                <option value="loss">Losses</option>
+                            </select>
+                        </div>
+                        <div class="hf-field">
+                            <label for="hf-grade">Lane grade</label>
+                            <select id="hf-grade">
+                                <option value="">All grades</option>
+                                <option>S+</option><option>S</option><option>A</option>
+                                <option>B</option><option>C</option><option>D</option><option>F</option>
+                            </select>
+                        </div>
+                        <div class="hf-field">
+                            <label for="hf-range">Played</label>
+                            <select id="hf-range">
+                                <option value="">All time</option>
+                                <option value="7">Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
+                        <div class="hf-field">
+                            <label for="hf-sort">Sort by</label>
+                            <select id="hf-sort">
+                                <option value="newest">Newest</option>
+                                <option value="played">Most played</option>
+                                <option value="winrate">Highest win rate</option>
+                                <option value="best">Best grade</option>
+                                <option value="worst">Worst grade</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <section class="panel history-table-card">
+                        <h3>Matchup Breakdown</h3>
+                        <div class="history-table-scroll">
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Matchup</th>
+                                        <th>Games</th>
+                                        <th>Wins</th>
+                                        <th>Losses</th>
+                                        <th>Win rate</th>
+                                        <th>Avg grade</th>
+                                        <th>Avg score</th>
+                                        <th>Last played</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-rows"></tbody>
+                            </table>
+                        </div>
+                        <p id="history-no-results" class="history-note hidden">No matchups found for these filters.</p>
+                    </section>
+
+                    <!-- Per-game detail for the selected matchup -->
+                    <section id="history-detail" class="panel history-detail hidden">
+                        <div class="history-detail-head">
+                            <h3 id="history-detail-title"></h3>
+                            <button type="button" id="history-detail-close" class="chip-btn">✕ Close</button>
+                        </div>
+                        <div id="history-games" class="history-games"></div>
+                    </section>
                 </div>
             </section>
 
