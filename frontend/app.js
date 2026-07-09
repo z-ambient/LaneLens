@@ -277,7 +277,9 @@ function setBusy(busy) {
     isBusy = busy;
     analyzeBtn.disabled = busy;
     demoBtn.disabled = busy;
-    analyzeBtn.textContent = busy ? "Analyzing..." : "Analyze My Matchup";
+    // Text lives in an inner <span> (the shiny-CTA glow layer on home).
+    (analyzeBtn.querySelector("span") || analyzeBtn).textContent =
+        busy ? "Analyzing..." : "Analyze My Matchup";
     const findBtn = document.getElementById("find-my-matchup");
     findBtn.disabled = busy;
     findBtn.textContent = busy ? "Analyzing..." : "Find My Matchup";
