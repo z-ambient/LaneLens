@@ -19,6 +19,10 @@ RIFT_QUEUES = {400, 420, 430, 440, 490}
 
 # Riot call budget per request: 1 id-list call + at most this many details.
 MAX_NEW_DETAILS = 10
+# How far back the id list looks. A new player backfills up to this many
+# games - MAX_NEW_DETAILS per refresh - and the Matchup History tab keeps
+# refreshing until the backlog (pending count) is drained.
+MATCH_ID_WINDOW = 50
 REMAKE_SECONDS = 300
 
 
@@ -83,16 +87,21 @@ def _participant_stats(participant, prefix=""):
 
 
 def update_history(client, puuid, region):
-    """Fetch match details we have not processed yet and store their matchups."""
+    """Fetch match details we have not processed yet and store their matchups.
+
+    Returns (entry, pending): pending is how many known match ids are still
+    unprocessed after this round - the remaining backfill the frontend
+    drains by refreshing again.
+    """
     stored = storage.history_get(puuid)
     entry = stored or {"processed": [], "games": []}
     processed = set(entry["processed"])
 
-    match_ids = client.get_match_ids(puuid, region, count=30)
+    match_ids = client.get_match_ids(puuid, region, count=MATCH_ID_WINDOW)
     # A player Riot has nothing for gets no row: this route is
     # unauthenticated, so a made-up PUUID must not grow the table.
     if stored is None and not match_ids:
-        return entry
+        return entry, 0
 
     new_ids = [match_id for match_id in match_ids if match_id not in processed]
 
@@ -110,7 +119,7 @@ def update_history(client, puuid, region):
     entry["processed"] = entry["processed"][-400:]
     entry["games"] = entry["games"][-300:]
     storage.history_set(puuid, entry)
-    return entry
+    return entry, max(0, len(new_ids) - MAX_NEW_DETAILS)
 
 
 def get_matchup_record(client, puuid, region, my_champion, enemy_champion):
@@ -119,7 +128,7 @@ def get_matchup_record(client, puuid, region, my_champion, enemy_champion):
     Returns {"games", "wins", "losses", "lastResult"} or None on failure.
     """
     try:
-        entry = update_history(client, puuid, region)
+        entry, _ = update_history(client, puuid, region)
     except Exception:
         logger.info("Matchup history unavailable for this analysis", exc_info=True)
         return None
@@ -158,8 +167,9 @@ def get_history_snapshot(client, puuid, region):
     shows their result but no grade.
     """
     refreshed = True
+    pending = 0
     try:
-        entry = update_history(client, puuid, region)
+        entry, pending = update_history(client, puuid, region)
     except Exception:
         logger.info("Matchup history refresh failed; serving stored games", exc_info=True)
         entry = storage.history_get(puuid) or {"processed": [], "games": []}
@@ -172,4 +182,4 @@ def get_history_snapshot(client, puuid, region):
         game = dict(stored)
         game.update(lane_score.describe(stored))
         games.append(game)
-    return {"games": games, "refreshed": refreshed}
+    return {"games": games, "refreshed": refreshed, "pendingGames": pending}

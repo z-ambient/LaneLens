@@ -164,6 +164,27 @@ def test_known_player_row_still_written_and_updated():
 # ---------- Stat capture + the signed-in history tab endpoint ----------
 
 
+def test_first_visit_backfills_in_chunks():
+    """A new player with a deep history drains it 10 games per refresh."""
+    matches = {}
+    for i in range(25):
+        match = _match(f"m{i:02d}", "Malphite", "Sett", True)
+        match["info"]["gameEndTimestamp"] = 1700000000000 + i
+        matches[f"m{i:02d}"] = match
+    fake = FakeClient(matches)
+
+    entry, pending = update_history(fake, "me", "americas")
+    assert len(entry["games"]) == 10 and pending == 15
+    entry, pending = update_history(fake, "me", "americas")
+    assert len(entry["games"]) == 20 and pending == 5
+    entry, pending = update_history(fake, "me", "americas")
+    assert len(entry["games"]) == 25 and pending == 0
+    # Fully drained: one more refresh fetches no new details.
+    calls_before = fake.detail_calls
+    entry, pending = update_history(fake, "me", "americas")
+    assert fake.detail_calls == calls_before and pending == 0
+
+
 def test_stored_game_captures_lane_score_stats():
     update_history(FakeClient({"m1": _match("m1", "Malphite", "Sett", True)}), "me", "americas")
     game = storage.history_get("me")["games"][0]
@@ -215,6 +236,7 @@ def test_my_history_returns_scored_games(monkeypatch):
 
     data = client.get("/api/my/matchup-history", headers=_signed_in_headers()).json()
     assert data["ok"] is True and data["refreshed"] is True
+    assert data["pendingGames"] == 0
     assert data["profile"]["gameName"] == "Me"
     game = data["games"][0]
     assert game["myChampion"] == "Malphite" and game["enemyChampion"] == "Sett"
@@ -240,4 +262,26 @@ def test_my_history_serves_stored_games_when_riot_fails(monkeypatch):
     data = client.get("/api/my/matchup-history", headers=_signed_in_headers()).json()
     assert data["ok"] is True
     assert data["refreshed"] is False
+    assert data["pendingGames"] == 0
     assert len(data["games"]) == 1
+
+
+def test_my_history_reports_backfill_remaining(monkeypatch):
+    """12 unseen games: the first response carries 10 and reports 2 pending."""
+    matches = {}
+    for i in range(12):
+        match = _match(f"m{i:02d}", "Malphite", "Sett", True)
+        match["info"]["participants"][0]["puuid"] = VALID_PUUID
+        matches[f"m{i:02d}"] = match
+    monkeypatch.setattr(main_module, "RiotClient", lambda: FakeAccountClient(matches))
+    monkeypatch.setattr(main_module, "riot_key_present", lambda: True)
+
+    headers = _signed_in_headers()
+    data = client.get("/api/my/matchup-history", headers=headers).json()
+    assert len(data["games"]) == 10
+    assert data["pendingGames"] == 2
+
+    # The follow-up refresh the frontend schedules drains the rest.
+    data = client.get("/api/my/matchup-history", headers=headers).json()
+    assert len(data["games"]) == 12
+    assert data["pendingGames"] == 0

@@ -530,6 +530,8 @@ let mePromise = null;        // resolved /api/me check (auth state known)
 let historyGames = null;     // fetched games, newest first; null = not loaded
 let historyNeedsProfile = false;
 let historyStale = false;    // served from storage, Riot refresh failed
+let historyPending = 0;      // backfill games Riot knows about but we haven't processed
+let historyImportTimer = null;
 let historyLoading = false;
 let historyDemoMode = false;
 let historySelected = null;  // "MyChampion|EnemyChampion" of the open detail
@@ -650,6 +652,38 @@ function historyShowState(id) {
     if (id !== "history-content") setHistorySplash(null);
 }
 
+// First-visit backfill: the backend processes at most 10 new games per
+// request, so while Riot still has unprocessed games (pendingGames > 0)
+// keep refreshing every 20s - comfortably inside the route's 5/min rate
+// limit - until the backlog is drained. The tab stays fully usable; each
+// round just adds the next chunk of games.
+function scheduleHistoryBackfill(pending) {
+    clearTimeout(historyImportTimer);
+    const note = document.getElementById("history-import-note");
+    if (!pending) {
+        note.classList.add("hidden");
+        return;
+    }
+    note.textContent =
+        `Building your matchup record — importing ${pending} more ` +
+        `game${pending === 1 ? "" : "s"} from your match history…`;
+    note.classList.remove("hidden");
+
+    historyImportTimer = setTimeout(() => {
+        // Left the history tab or signed out: stop - the import picks up
+        // where it left off on the next visit.
+        const tabHidden = document.getElementById("history").classList.contains("hidden");
+        if (tabHidden || historyDemoMode || !currentUser) return;
+        // Browser tab backgrounded: don't burn Riot calls, check again later.
+        if (document.hidden) {
+            scheduleHistoryBackfill(pending);
+            return;
+        }
+        historyGames = null; // force a refetch
+        renderHistoryTab();
+    }, 20000);
+}
+
 // Faded splash art of the most played champion behind the tab (like the
 // overview card's champion splash).
 function setHistorySplash(games) {
@@ -716,6 +750,7 @@ async function fetchMyHistory() {
         historyGames = data.games || [];
         historyNeedsProfile = !!data.needsProfile;
         historyStale = data.refreshed === false;
+        historyPending = data.pendingGames || 0;
         historyLoading = false;
         renderHistoryTab();
         return;
@@ -839,6 +874,7 @@ async function renderHistoryContent(games, isDemo) {
     historyShowState("history-content");
     document.getElementById("history-demo-note").classList.toggle("hidden", !isDemo);
     document.getElementById("history-stale-note").classList.toggle("hidden", isDemo || !historyStale);
+    scheduleHistoryBackfill(isDemo ? 0 : historyPending);
 
     setHistorySplash(games);
     populateHistoryChampFilters(games);

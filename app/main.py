@@ -396,6 +396,9 @@ def my_matchup_history(request: Request):
             "platform": platform,
         },
         "refreshed": snapshot["refreshed"],
+        # Backfill remaining: match ids seen but not yet processed. The
+        # frontend keeps refreshing (inside the rate limit) until zero.
+        "pendingGames": snapshot["pendingGames"],
         "games": snapshot["games"],
     }
 
