@@ -2090,6 +2090,28 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 /* Per-game detail */
 
+/* Faded splash of the viewed matchup's champion behind the game list.
+   The panel's border, rounded corners, and overflow:hidden frame it; the
+   mask dissolves it before the lower cards. */
+.history-detail-splash {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 380px;
+    object-fit: cover;
+    object-position: center 20%;
+    /* Strong enough to ghost through the translucent game cards below. */
+    opacity: 0.3;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 8%, transparent 92%);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 8%, transparent 92%);
+    animation: splashIn 0.9s ease backwards;
+}
+
+/* Detail content renders above its splash. */
+.history-detail > *:not(.history-detail-splash) { position: relative; }
+
 .history-detail-head {
     display: flex;
     align-items: center;
@@ -2106,7 +2128,9 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
    gold hover lift). The result reads from the Victory/Defeat pill plus a
    faint corner wash - no colored edge strips. */
 .hgame {
-    background: linear-gradient(150deg, var(--panel-light), var(--panel));
+    /* Slightly translucent (vs the opaque panel gradient) so the matchup
+       champion's splash behind the panel ghosts through each card. */
+    background: linear-gradient(150deg, rgba(23, 40, 60, 0.82), rgba(16, 29, 45, 0.86));
     border: 1px solid var(--card-border);
     border-radius: 12px;
     padding: 14px 18px;
@@ -2125,13 +2149,13 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 .hgame.is-win {
     background:
         radial-gradient(circle at top left, rgba(76, 208, 141, 0.13), transparent 46%),
-        linear-gradient(150deg, var(--panel-light), var(--panel));
+        linear-gradient(150deg, rgba(23, 40, 60, 0.82), rgba(16, 29, 45, 0.86));
 }
 
 .hgame.is-loss {
     background:
         radial-gradient(circle at top left, rgba(255, 107, 107, 0.13), transparent 46%),
-        linear-gradient(150deg, var(--panel-light), var(--panel));
+        linear-gradient(150deg, rgba(23, 40, 60, 0.82), rgba(16, 29, 45, 0.86));
 }
 
 .hg-top { display: flex; align-items: center; gap: 12px; }

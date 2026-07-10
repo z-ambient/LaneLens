@@ -10,8 +10,8 @@
     <!-- Bump ?v= together whenever styles.css or app.js changes: browsers
          cache subresources aggressively, and a stale stylesheet against
          fresh markup renders broken layouts. -->
-    <link rel="stylesheet" href="styles.css?v=4">
-    <script src="app.js?v=4" defer></script>
+    <link rel="stylesheet" href="styles.css?v=5">
+    <script src="app.js?v=5" defer></script>
 </head>
 <body>
     <!-- Slim app rail (decorative shell) -->
@@ -336,6 +336,7 @@
 
                     <!-- Per-game detail for the selected matchup -->
                     <section id="history-detail" class="panel history-detail hidden">
+                        <img id="history-detail-splash" class="history-detail-splash" alt="">
                         <div class="history-detail-head">
                             <h3 id="history-detail-title"></h3>
                             <button type="button" id="history-detail-close" class="chip-btn">✕ Close</button>

@@ -1123,6 +1123,12 @@ function renderHistoryDetail(rows, version) {
     document.getElementById("history-detail-title").textContent =
         `${row.myChampion} vs ${row.enemyChampion} — ${row.wins}W · ${row.losses}L`;
 
+    // Faded splash of MY champion in this matchup behind the game list.
+    const splash = document.getElementById("history-detail-splash");
+    splash.onerror = () => splash.classList.add("hidden");
+    splash.classList.remove("hidden");
+    splash.src = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${row.myChampion}_0.jpg`;
+
     const list = document.getElementById("history-games");
     list.replaceChildren();
     row.games.forEach((game) => list.appendChild(historyGameCard(game, version)));
