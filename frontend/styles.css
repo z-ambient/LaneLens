@@ -1860,6 +1860,9 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
+    /* Nudge titles right so they line up over the dropdown's inner text
+       instead of its border edge. */
+    padding-left: 5px;
 }
 
 .hf-field select {
