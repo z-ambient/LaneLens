@@ -1067,7 +1067,7 @@ function renderHistoryTable(rows, version) {
                 // Re-collapse with the same soft fade + height glide the
                 // dashboard panels use (the scroller has no entrance
                 // animation to clash with, unlike the card).
-                smoothUpdate([".history-table-scroll"], rerender, true);
+                smoothUpdate([".history-table-scroll"], rerender, true, true);
             } else {
                 rerender();
             }
@@ -1090,7 +1090,7 @@ function renderHistoryTable(rows, version) {
         button.addEventListener("click", () => {
             historyBreakdownExpanded = true;
             // Expand with the same glide as the re-collapse.
-            smoothUpdate([".history-table-scroll"], () => renderHistoryTable(rows, version), true);
+            smoothUpdate([".history-table-scroll"], () => renderHistoryTable(rows, version), true, true);
         });
         overlay.appendChild(button);
         scroller.appendChild(overlay);
@@ -1334,7 +1334,9 @@ const SECTION_RENDER = {
 // Re-render a section with a soft content fade. Most panels are fixed
 // height so nothing shifts; content-sized panels (the build) glide
 // smoothly from their old height to the new one.
-function smoothUpdate(selectors, renderFn, animateHeight) {
+// slowGlide: a longer ease-out height curve for big expand/collapse moves
+// (the matchup breakdown); default stays snappy for the AI panel refreshes.
+function smoothUpdate(selectors, renderFn, animateHeight, slowGlide) {
     const panels = selectors.flatMap((selector) => [...document.querySelectorAll(selector)]);
     const oldHeights = animateHeight ? panels.map((panel) => panel.offsetHeight) : null;
 
@@ -1351,14 +1353,16 @@ function smoothUpdate(selectors, renderFn, animateHeight) {
         if (Math.abs(newHeight - oldHeights[index]) > 2) {
             panel.style.height = oldHeights[index] + "px";
             panel.style.overflow = "hidden";
-            panel.style.transition = "height 0.35s ease";
+            panel.style.transition = slowGlide
+                ? "height 0.6s cubic-bezier(0.22, 1, 0.36, 1)"
+                : "height 0.35s ease";
             requestAnimationFrame(() => {
                 panel.style.height = newHeight + "px";
                 setTimeout(() => {
                     panel.style.height = "";
                     panel.style.overflow = "";
                     panel.style.transition = "";
-                }, 380);
+                }, slowGlide ? 640 : 380);
             });
         }
     });
