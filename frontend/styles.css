@@ -2124,19 +2124,30 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 .hg-top { display: flex; align-items: center; gap: 12px; }
 
 /* Shared columns on every card: my champion + stats | vs | enemy champion
-   + stats | grade on the right edge. Equal 1fr sides keep "vs" at the
-   same spot from game to game. */
+   + stats | grade on the right edge. Every track is either fixed or 1fr -
+   an auto grade column would resize with its label and shift "vs" and the
+   enemy block from card to card. */
 .hg-main {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr) auto;
+    /* My column is sized to its content (stat line ~220px) instead of 1fr,
+       so "vs" sits visually between the two champions rather than across
+       a stretch of empty column. */
+    grid-template-columns: 226px 34px minmax(0, 1fr) 180px;
     align-items: center;
     gap: 18px;
 }
 
-/* "vs" lines up with the champion headers, not the stat boxes. */
-.hg-main > .hm-vs { text-align: center; align-self: start; line-height: 30px; }
+/* "vs" lines up with the champion headers, just after my stat line. */
+.hg-main > .hm-vs {
+    text-align: center;
+    align-self: start;
+    line-height: 30px;
+}
 
 .hg-champ { display: grid; gap: 10px; min-width: 0; align-self: start; }
+
+/* The enemy block keeps extra breathing room from the "vs". */
+.hg-main > .hm-vs + .hg-champ { margin-left: 105px; }
 
 .hg-champ-head { display: flex; align-items: center; gap: 8px; }
 
@@ -2187,15 +2198,11 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .hg-grade-label { color: var(--muted-text); font-size: 0.76rem; }
 
-/* Each champion's stat line sits in its own soft box under the name. */
+/* Each champion's stat line sits plainly under their name - no box. */
 .hg-stats {
     display: flex;
     gap: 18px;
     flex-wrap: wrap;
-    padding: 8px 14px;
-    background: rgba(7, 17, 31, 0.45);
-    border: 1px solid var(--card-border);
-    border-radius: 8px;
 }
 
 .hg-stat { display: grid; gap: 1px; }
