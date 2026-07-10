@@ -1693,6 +1693,25 @@ footer p { color: var(--muted-text); font-size: 0.72rem; }
 /* Content renders above the splash. */
 .history > *:not(.history-splash) { position: relative; }
 
+/* Staggered fade-up when the tab is revealed - same fadeUp the dashboard
+   uses. Animations restart whenever an element leaves display:none, so
+   opening the tab (or switching states) replays the cascade. */
+.history-title,
+.history-state,
+#history-content > * { animation: fadeUp 0.45s ease backwards; }
+
+.history-state { animation-delay: 0.06s; }
+#history-summary { animation-delay: 0.06s; }
+#history-content .history-filters { animation-delay: 0.14s; }
+#history-content .history-table-card { animation-delay: 0.22s; }
+/* No delay: the detail opens on click and should respond instantly. */
+#history-content .history-detail { animation-delay: 0s; }
+
+/* The splash just fades in to its resting opacity - no vertical drift. */
+.history-splash { animation: splashIn 0.9s ease backwards; }
+
+@keyframes splashIn { from { opacity: 0; } }
+
 /* The content sections (notes, summary tiles, filters, breakdown, detail)
    stack with the same generous gap as the tab itself. */
 #history-content { display: grid; gap: 32px; }
