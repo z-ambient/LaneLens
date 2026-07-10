@@ -535,6 +535,7 @@ let historyImportTimer = null;
 let historyLoading = false;
 let historyDemoMode = false;
 let historySelected = null;  // "MyChampion|EnemyChampion" of the open detail
+let historyBreakdownExpanded = false; // View More clicked on the breakdown
 
 const HISTORY_STATES = [
     "history-locked", "history-no-profile", "history-loading",
@@ -620,6 +621,13 @@ function demoHistoryGames() {
             "Total lane control — you denied CS, dodged every blind, and turned the lead into two towers."),
         game(27, "Malphite", "Fiora", false, 52, [2, 4, 6, 158, 9800, 9200], [5, 3, 4, 186, 12100, 17800]),
         game(29, "Malphite", "Sett", true, 76, [3, 2, 10, 178, 11300, 12800], [2, 4, 6, 170, 10700, 15100]),
+        // Extra one-off matchups so the breakdown is long enough to show
+        // the collapsed View More state.
+        game(3, "Malphite", "Renekton", false, 58, [2, 4, 6, 158, 9900, 9400], [4, 3, 4, 182, 11700, 16200]),
+        game(5, "Garen", "Darius", true, 74, [5, 3, 4, 181, 11800, 16400], [3, 4, 3, 169, 10600, 15000]),
+        game(11, "Malphite", "Camille", true, 69, [2, 3, 9, 165, 10600, 10800], [3, 3, 5, 172, 10900, 15600]),
+        game(16, "Garen", "Quinn", false, 41, [1, 6, 3, 144, 9000, 8300], [7, 2, 4, 190, 12600, 18900]),
+        game(19, "Malphite", "Jax", true, 63, [2, 4, 8, 160, 10200, 9900], [4, 3, 4, 175, 11100, 15800]),
     ];
     return demoHistoryCache;
 }
@@ -640,6 +648,7 @@ async function showHistory() {
     document.getElementById("history").classList.remove("hidden");
     setRailActive("history");
     window.scrollTo({ top: 0, behavior: "instant" });
+    historyBreakdownExpanded = false; // fresh visit starts re-collapsed
     if (mePromise) await mePromise; // auth state must be known before rendering
     renderHistoryTab();
 }
@@ -993,13 +1002,26 @@ function matchupCell(row, version, size) {
     return cell;
 }
 
+// Long lists collapse to the first 7 rows: rows 8 and 9 stay visible but
+// increasingly blurred (a preview of what's below), rows past 9 hide, and
+// a View More button floats over the blur. Only kicks in past 9 rows -
+// collapsing a list the button's own footprint could show is pointless.
+const BREAKDOWN_COLLAPSE_AT = 9;
+const BREAKDOWN_VISIBLE_ROWS = 7;
+
 function renderHistoryTable(rows, version) {
     const body = document.getElementById("history-rows");
     body.replaceChildren();
     document.getElementById("history-no-results").classList.toggle("hidden", rows.length > 0);
+    const collapsed = !historyBreakdownExpanded && rows.length > BREAKDOWN_COLLAPSE_AT;
 
-    for (const row of rows) {
+    rows.forEach((row, index) => {
         const tr = el("tr", row.key === historySelected ? "is-selected" : null);
+        if (collapsed) {
+            if (index === BREAKDOWN_VISIBLE_ROWS) tr.classList.add("hm-blur-soft");
+            else if (index === BREAKDOWN_VISIBLE_ROWS + 1) tr.classList.add("hm-blur-hard");
+            else if (index > BREAKDOWN_VISIBLE_ROWS + 1) tr.classList.add("hidden");
+        }
 
         const matchup = el("td");
         matchup.appendChild(matchupCell(row, version));
@@ -1032,8 +1054,23 @@ function renderHistoryTable(rows, version) {
         tr.appendChild(actions);
 
         tr.addEventListener("click", () => {
+            const wasExpanded = historyBreakdownExpanded;
             historySelected = row.key === historySelected ? null : row.key;
-            renderHistoryTab();
+            // Opening a matchup's games re-collapses an expanded breakdown -
+            // the focus moves to the detail below it.
+            if (historySelected) historyBreakdownExpanded = false;
+            const rerender = () => {
+                renderHistoryTable(rows, version);
+                renderHistoryDetail(rows, version);
+            };
+            if (historySelected && wasExpanded) {
+                // Re-collapse with the same soft fade + height glide the
+                // dashboard panels use (the scroller has no entrance
+                // animation to clash with, unlike the card).
+                smoothUpdate([".history-table-scroll"], rerender, true);
+            } else {
+                rerender();
+            }
             if (historySelected) {
                 setTimeout(() =>
                     document.getElementById("history-detail")
@@ -1041,6 +1078,26 @@ function renderHistoryTable(rows, version) {
             }
         });
         body.appendChild(tr);
+    });
+
+    // View More floats over the blurred preview rows.
+    const scroller = body.closest(".history-table-scroll");
+    scroller.querySelector(".hm-viewmore")?.remove();
+    if (collapsed) {
+        const overlay = el("div", "hm-viewmore");
+        const button = el("button", "btn-gold", "View More");
+        button.type = "button";
+        button.addEventListener("click", () => {
+            historyBreakdownExpanded = true;
+            // Expand with the same glide as the re-collapse.
+            smoothUpdate([".history-table-scroll"], () => renderHistoryTable(rows, version), true);
+        });
+        overlay.appendChild(button);
+        scroller.appendChild(overlay);
+        // Cover exactly the two blurred rows.
+        const blurred = body.querySelectorAll(".hm-blur-soft, .hm-blur-hard");
+        overlay.style.height =
+            [...blurred].reduce((sum, tr) => sum + tr.offsetHeight, 0) + "px";
     }
 }
 
