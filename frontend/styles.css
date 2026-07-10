@@ -1862,7 +1862,7 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
     letter-spacing: 1px;
     /* Nudge titles right so they line up over the dropdown's inner text
        instead of its border edge. */
-    padding-left: 5px;
+    padding-left: 10px;
 }
 
 .hf-field select {
