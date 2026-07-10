@@ -2123,29 +2123,36 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .hg-top { display: flex; align-items: center; gap: 12px; }
 
-/* Fixed columns shared by every card, so matchup, stats, and grade line
-   up vertically from game to game. */
+/* Shared columns on every card: my champion + stats | vs | enemy champion
+   + stats | grade on the right edge. Equal 1fr sides keep "vs" at the
+   same spot from game to game. */
 .hg-main {
     display: grid;
-    grid-template-columns: 314px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr) auto;
     align-items: center;
-    gap: 20px;
+    gap: 18px;
 }
 
-.hg-main .hm-champs {
-    display: grid;
-    grid-template-columns: 140px 34px 140px;
-    gap: 0;
+/* "vs" lines up with the champion headers, not the stat boxes. */
+.hg-main > .hm-vs { text-align: center; align-self: start; line-height: 30px; }
+
+.hg-champ { display: grid; gap: 10px; min-width: 0; align-self: start; }
+
+.hg-champ-head { display: flex; align-items: center; gap: 8px; }
+
+.hg-champ-head img {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--background);
+    flex-shrink: 0;
 }
 
-.hg-main .hm-vs { text-align: center; }
-
-.hg-main .hm-champs img { width: 34px; height: 34px; }
-
-/* Narrow screens: let the columns wrap instead of squeezing. */
+/* Narrow screens: the two champion blocks stack - "vs" is implied. */
 @media (max-width: 980px) {
     .hg-main { display: flex; flex-wrap: wrap; }
-    .hg-main .hm-champs { display: flex; }
+    .hg-main > .hm-vs { display: none; }
 }
 
 .hg-result {
@@ -2180,13 +2187,15 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 
 .hg-grade-label { color: var(--muted-text); font-size: 0.76rem; }
 
-/* Vertical divider separates the numbers from the matchup. */
+/* Each champion's stat line sits in its own soft box under the name. */
 .hg-stats {
     display: flex;
-    gap: 22px;
+    gap: 18px;
     flex-wrap: wrap;
-    padding-left: 22px;
-    border-left: 1px solid var(--border);
+    padding: 8px 14px;
+    background: rgba(7, 17, 31, 0.45);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
 }
 
 .hg-stat { display: grid; gap: 1px; }
@@ -2200,14 +2209,6 @@ a.history-login { text-decoration: none; display: inline-block; border-radius: 8
 }
 
 .hg-stat-value { font-size: 0.9rem; font-weight: bold; font-variant-numeric: tabular-nums; }
-
-.hg-enemy-line {
-    margin: 0;
-    padding-top: 10px;
-    border-top: 1px solid rgba(48, 68, 94, 0.45);
-    color: var(--muted-text);
-    font-size: 0.8rem;
-}
 
 .hg-summary {
     margin: 0;

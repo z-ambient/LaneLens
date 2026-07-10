@@ -1044,6 +1044,25 @@ function renderHistoryTable(rows, version) {
     }
 }
 
+// One side of a game card: champion header with their stat line boxed
+// beneath (stats may be null for records stored before stat capture).
+function gameChampBlock(name, version, stats) {
+    const block = el("div", "hg-champ");
+    const head = el("div", "hg-champ-head");
+    head.appendChild(champIcon(name, version, 30));
+    head.appendChild(el("span", "hm-name", name));
+    block.appendChild(head);
+    if (stats) {
+        const row = el("div", "hg-stats");
+        row.appendChild(statBlock("KDA", stats.kda));
+        row.appendChild(statBlock("CS", String(stats.cs)));
+        row.appendChild(statBlock("Gold", fmtThousands(stats.gold)));
+        row.appendChild(statBlock("Damage", fmtThousands(stats.damage)));
+        block.appendChild(row);
+    }
+    return block;
+}
+
 function statBlock(label, value) {
     const block = el("div", "hg-stat");
     block.appendChild(el("span", "hg-stat-label", label));
@@ -1060,19 +1079,20 @@ function historyGameCard(game, version) {
     top.appendChild(el("span", "hg-when", fmtWhen(game.endedAt)));
     card.appendChild(top);
 
-    // Aligned columns (same widths on every card): matchup | stats | grade.
+    // My champion + my stat line | vs | enemy champion + their stat line,
+    // with the grade on the right edge.
     const main = el("div", "hg-main");
-
-    main.appendChild(matchupCell(game, version, 34));
-
-    if (game.laneScore != null) {
-        const stats = el("div", "hg-stats");
-        stats.appendChild(statBlock("KDA", `${game.kills} / ${game.deaths} / ${game.assists}`));
-        stats.appendChild(statBlock("CS", String(game.cs)));
-        stats.appendChild(statBlock("Gold", fmtThousands(game.gold)));
-        stats.appendChild(statBlock("Damage", fmtThousands(game.damage)));
-        main.appendChild(stats);
-    }
+    main.appendChild(gameChampBlock(game.myChampion, version,
+        game.laneScore == null ? null : {
+            kda: `${game.kills} / ${game.deaths} / ${game.assists}`,
+            cs: game.cs, gold: game.gold, damage: game.damage,
+        }));
+    main.appendChild(el("span", "hm-vs", "vs"));
+    main.appendChild(gameChampBlock(game.enemyChampion, version,
+        game.enemyKills == null ? null : {
+            kda: `${game.enemyKills} / ${game.enemyDeaths} / ${game.enemyAssists}`,
+            cs: game.enemyCs, gold: game.enemyGold, damage: game.enemyDamage,
+        }));
 
     // Grade rides the right edge: score/label first, emblem outermost.
     const gradeWrap = el("div", "hg-grade");
@@ -1085,12 +1105,6 @@ function historyGameCard(game, version) {
     main.appendChild(gradeWrap);
 
     card.appendChild(main);
-
-    if (game.enemyKills != null) {
-        card.appendChild(el("p", "hg-enemy-line",
-            `${game.enemyChampion}: ${game.enemyKills} / ${game.enemyDeaths} / ${game.enemyAssists}` +
-            ` · ${game.enemyCs} CS · ${fmtThousands(game.enemyGold)} gold · ${fmtThousands(game.enemyDamage)} dmg`));
-    }
     if (game.aiSummary) {
         card.appendChild(el("p", "hg-summary", `“${game.aiSummary}”`));
     }
