@@ -1686,8 +1686,21 @@ footer p { color: var(--muted-text); font-size: 0.72rem; }
     object-position: center 20%;
     opacity: 0.14;
     pointer-events: none;
-    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 15%, transparent 92%);
-    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 15%, transparent 92%);
+    /* Radial mask anchored top-center feathers ALL edges - on wide
+       windows a bottom-only fade left hard vertical cutoffs at the sides
+       that read as a pasted-on rectangle. */
+    /* Two intersected layers: the radial feathers the sides/bottom, the
+       linear adds a slight fade at the top edge too. */
+    -webkit-mask-image:
+        linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 1) 48px),
+        radial-gradient(ellipse 60% 100% at 50% 0%,
+            rgba(0, 0, 0, 1) 35%, rgba(0, 0, 0, 0.4) 65%, transparent 82%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+        linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 1) 48px),
+        radial-gradient(ellipse 60% 100% at 50% 0%,
+            rgba(0, 0, 0, 1) 35%, rgba(0, 0, 0, 0.4) 65%, transparent 82%);
+    mask-composite: intersect;
 }
 
 /* Content renders above the splash. */
